@@ -1152,7 +1152,7 @@ function displaySolution(solution) {
       solutionStatus.innerHTML = '<strong>Solved!</strong>';
       solutionStatus.className = 'success';
     } else {
-      solutionStatus.innerHTML = '<strong>Solution does not satisfy all of the constraints!</strong>';
+      solutionStatus.innerHTML = '<strong>Solution does not satisfy me!</strong>';
       solutionStatus.className = 'error';
     }
     
