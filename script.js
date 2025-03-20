@@ -83,51 +83,72 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Functions
+    
     function generateGrid(width, height) {
         // Clear any existing grid
         puzzleGrid.innerHTML = '';
         
-        // Set grid template
+        // Set grid template (all cells 40px square)
         puzzleGrid.style.gridTemplateColumns = `repeat(${width + 2}, 40px)`;
         puzzleGrid.style.gridTemplateRows = `repeat(${height + 2}, 40px)`;
         
-        // Generate cells
+        // Generate cells. The overall grid has extra rows and columns for headers.
         for (let row = 0; row < height + 2; row++) {
             for (let col = 0; col < width + 2; col++) {
                 const cell = document.createElement('div');
                 cell.className = 'cell';
                 
-                // Headers
-                if (row === 0 && col === 0 || row === 0 && col === 1 || row === 1 && col === 0 || row === 1 && col === 1) {
-                    cell.className = 'cell header';
+                // Headers: the upper left 2x2 block
+                if ((row === 0 && col < 2) || (col === 0 && row < 2)) {
+                    cell.classList.add('header');
                     cell.textContent = '.';
                 }
-                // Oil row headers (top row)
+                // Oil header: top row (row 0), excluding first two cells – oil count per COL.
                 else if (row === 0 && col > 1) {
-                    cell.className = 'cell oil-header';
+                    cell.classList.add('oil-header');
+                    // Add red style via CSS class or inline style if needed
+                    cell.style.backgroundColor = '#fdd';
                     const input = createInputElement();
                     cell.appendChild(input);
                 }
-                // Oil column headers (left column)
+                // Oil header: first column (col 0) for rows after the header – oil count per ROW.
                 else if (col === 0 && row > 1) {
-                    cell.className = 'cell oil-header';
+                    cell.classList.add('oil-header');
+                    cell.style.backgroundColor = '#fdd';
                     const input = createInputElement();
                     cell.appendChild(input);
                 }
-                // Water row headers (bottom row)
+                // Water header: bottom row (last row), excluding first two cells – water count per COL.
                 else if (row === height + 1 && col > 1) {
-                    cell.className = 'cell water-header';
+                    cell.classList.add('water-header');
+                    cell.style.backgroundColor = '#ddf';
                     const input = createInputElement();
                     cell.appendChild(input);
                 }
-                // Water column headers (right column)
+                // Water header: last column (col = width + 1) for rows after header – water count per ROW.
                 else if (col === width + 1 && row > 1) {
-                    cell.className = 'cell water-header';
+                    cell.classList.add('water-header');
+                    cell.style.backgroundColor = '#ddf';
                     const input = createInputElement();
                     cell.appendChild(input);
                 }
-                // Grid cells for aquarium numbers
-                else if (row > 1 && col > 1 && row <= height && col <= width) {
+                // Aquarium cells (the main puzzle area)
+                else if (row > 1 && row <= height && col > 1 && col <= width) {
+                    const input = createInputElement();
+                    cell.appendChild(input);
+                    cell.classList.add('aquarium-cell');
+                    
+                    // Add a thicker top and left border for the first row/column of the aquarium cells 
+                    // (i.e. at the border between headers and aquarium area)
+                    if (row === 2) {
+                        cell.style.borderTop = '3px solid black';
+                    }
+                    if (col === 2) {
+                        cell.style.borderLeft = '3px solid black';
+                    }
+                }
+                // For any leftover cell (like header cells in position (1,x) or (x,1))
+                else {
                     const input = createInputElement();
                     cell.appendChild(input);
                 }
@@ -145,7 +166,7 @@ document.addEventListener('DOMContentLoaded', function() {
         input.type = 'text';
         input.maxLength = 3;
         
-        // Validate input to allow only numbers
+        // Validate input to allow only numbers. (Empty string will later be treated as zero.)
         input.addEventListener('input', function() {
             this.value = this.value.replace(/[^0-9]/g, '');
         });
@@ -169,7 +190,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 throw new Error('Not enough columns in input');
             }
             
-            // Determine grid size
+            // Determine grid size, excluding the header rows/columns.
             const height = lines.length - 2; // Minus the two header rows
             const width = firstLineValues.length - 2; // Minus the two header columns
             
@@ -201,7 +222,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     const cellIndex = rowIndex * (width + 2) + colIndex;
                     const cell = cells[cellIndex];
                     
-                    // Update cell value
+                    // Update cell value:
+                    // If the value is not ".", set the input value or the textContent.
                     if (cell) {
                         const input = cell.querySelector('input');
                         if (input) {
@@ -249,46 +271,51 @@ document.addEventListener('DOMContentLoaded', function() {
             aquariums: []                      // Aquarium mapping
         };
         
-        // Collect data from grid
+        // Helper to safely parse a number input (empty or invalid becomes 0)
+        function safeParse(val) {
+            const num = parseInt(val);
+            return isNaN(num) ? 0 : num;
+        }
+        
         const cells = puzzleGrid.querySelectorAll('.cell');
         
-        // Oil row headers (top row)
+        // Oil header: top row, columns > 1 for oil counts per column
         for (let col = 2; col < width + 2; col++) {
             const cellIndex = col;
             const input = cells[cellIndex].querySelector('input');
-            puzzle.oilCol[col - 2] = parseInt(input?.value || 0);
+            puzzle.oilCol[col - 2] = safeParse(input ? input.value : '');
         }
         
-        // Oil column headers (left column)
+        // Oil header: first column for rows > 1 for oil counts per row
         for (let row = 2; row < height + 2; row++) {
             const cellIndex = row * (width + 2);
             const input = cells[cellIndex].querySelector('input');
-            puzzle.oilRow[row - 2] = parseInt(input?.value || 0);
+            puzzle.oilRow[row - 2] = safeParse(input ? input.value : '');
         }
         
-        // Water row headers (bottom row)
+        // Water header: bottom row for columns > 1, water counts per column
         for (let col = 2; col < width + 2; col++) {
             const cellIndex = (height + 1) * (width + 2) + col;
             const input = cells[cellIndex].querySelector('input');
-            puzzle.waterCol[col - 2] = parseInt(input?.value || 0);
+            puzzle.waterCol[col - 2] = safeParse(input ? input.value : '');
         }
         
-        // Water column headers (right column)
+        // Water header: last column for rows > 1, water counts per row
         for (let row = 2; row < height + 2; row++) {
             const cellIndex = row * (width + 2) + width + 1;
             const input = cells[cellIndex].querySelector('input');
-            puzzle.waterRow[row - 2] = parseInt(input?.value || 0);
+            puzzle.waterRow[row - 2] = safeParse(input ? input.value : '');
         }
         
         // Initialize aquariums grid
         puzzle.aquariums = Array(height).fill().map(() => Array(width).fill(0));
         
-        // Aquarium numbers
+        // Aquarium numbers: interior cells from row 2 to height+1 and col 2 to width+1
         for (let row = 0; row < height; row++) {
             for (let col = 0; col < width; col++) {
                 const cellIndex = (row + 2) * (width + 2) + (col + 2);
                 const input = cells[cellIndex].querySelector('input');
-                puzzle.aquariums[row][col] = parseInt(input?.value || 0);
+                puzzle.aquariums[row][col] = safeParse(input ? input.value : '');
             }
         }
         
@@ -296,7 +323,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function validatePuzzleInput(puzzle) {
-        // Check if there are any aquariums defined
+        // Check that at least one aquarium cell has a positive number
         let hasAquarium = false;
         for (let row = 0; row < puzzle.height; row++) {
             for (let col = 0; col < puzzle.width; col++) {
@@ -312,7 +339,7 @@ document.addEventListener('DOMContentLoaded', function() {
             throw new Error('No aquariums defined in the puzzle');
         }
         
-        // Check if aquariums are contiguous
+        // Check that each aquarium (each positive id) forms a contiguous region.
         const aquariumIds = new Set();
         for (let row = 0; row < puzzle.height; row++) {
             for (let col = 0; col < puzzle.width; col++) {
@@ -329,7 +356,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
-        // Check if constraints are valid
+        // Validate that oil+water counts do not exceed number of cells in each row/column.
         for (let row = 0; row < puzzle.height; row++) {
             if (puzzle.oilRow[row] + puzzle.waterRow[row] > puzzle.width) {
                 throw new Error(`Row ${row + 1} has more oil and water than available cells`);
@@ -351,7 +378,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const visited = Array(height).fill().map(() => Array(width).fill(false));
         let foundCells = 0;
         
-        // Find first cell of this aquarium
+        // Find the first cell for this aquarium id
         let startRow = -1, startCol = -1;
         for (let row = 0; row < height; row++) {
             for (let col = 0; col < width; col++) {
@@ -366,14 +393,14 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (startRow === -1) return true; // No cells with this ID
         
-        // DFS to check contiguity
+        // DFS to search for connected cells
         const stack = [{row: startRow, col: startCol}];
         const directions = [{dr: -1, dc: 0}, {dr: 1, dc: 0}, {dr: 0, dc: -1}, {dr: 0, dc: 1}];
         
         while (stack.length > 0) {
             const {row, col} = stack.pop();
             
-            if (row < 0 || row >= height || col < 0 || col >= width || 
+            if (row < 0 || row >= height || col < 0 || col >= width ||
                 visited[row][col] || aquariums[row][col] !== id) {
                 continue;
             }
@@ -386,7 +413,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
-        // Count total cells with this ID
+        // Count all cells that belong to this aquarium id
         let totalCells = 0;
         for (let row = 0; row < height; row++) {
             for (let col = 0; col < width; col++) {
@@ -400,14 +427,14 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function solvePuzzle(puzzle) {
-        // Create solution grid
+        // Create solution structure
         const solution = {
             width: puzzle.width,
             height: puzzle.height,
             cells: Array(puzzle.height).fill().map(() => Array(puzzle.width).fill(0)) // 0: empty, 1: water, 2: oil
         };
         
-        // Step 1: Identify all unique aquariums and their cells
+        // Identify aquariums and their cells
         const aquariums = {};
         for (let row = 0; row < puzzle.height; row++) {
             for (let col = 0; col < puzzle.width; col++) {
@@ -421,7 +448,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
-        // First pass: Use constraint satisfaction to determine oil and water placement
+        // Use constraint satisfaction first.
         const solveResult = solveConstraints(puzzle, aquariums);
         
         if (solveResult.solved) {
@@ -430,18 +457,15 @@ document.addEventListener('DOMContentLoaded', function() {
             return solution;
         }
         
-        // If constraint satisfaction failed, try a more aggressive approach
-        // Step 2: Sort aquariums by bottom row position (to fill from bottom up)
+        // If constraints alone couldn’t solve, try a heuristic fill per aquarium.
         const sortedAquariums = Object.entries(aquariums).map(([id, cells]) => {
             const bottomRow = Math.max(...cells.map(cell => cell.row));
             return { id: parseInt(id), cells, bottomRow };
         }).sort((a, b) => b.bottomRow - a.bottomRow);
         
-        // Step 3: For each aquarium, try to fill with water first, then oil
         for (const aquarium of sortedAquariums) {
-            const { id, cells } = aquarium;
-            
-            // Group cells by row
+            const { cells } = aquarium;
+            // Group cells by row.
             const rowGroups = {};
             cells.forEach(cell => {
                 if (!rowGroups[cell.row]) {
@@ -449,87 +473,63 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 rowGroups[cell.row].push(cell);
             });
-            
-            // Sort rows from bottom to top
+            // Get rows from bottom to top.
             const rows = Object.keys(rowGroups).map(Number).sort((a, b) => b - a);
             
-            // Try to fill bottom rows with water first
+            // Try to fill bottom rows with water.
             let filledWater = false;
             for (const row of rows) {
                 const rowCells = rowGroups[row];
-                
-                // Check if we can add water to this row
                 let canAddWater = true;
                 for (const cell of rowCells) {
-                    if (solution.cells[cell.row][cell.col] !== 0) {
-                        canAddWater = false;
-                        break;
-                    }
-                    
-                    // Check row/column constraints
-                    if (countRowType(solution.cells, cell.row, 1) >= puzzle.waterRow[cell.row] ||
+                    if (solution.cells[cell.row][cell.col] !== 0 ||
+                        countRowType(solution.cells, cell.row, 1) >= puzzle.waterRow[cell.row] ||
                         countColType(solution.cells, cell.col, 1) >= puzzle.waterCol[cell.col]) {
                         canAddWater = false;
                         break;
                     }
                 }
-                
                 if (canAddWater) {
-                    // Add water to all cells in this row of the aquarium
                     rowCells.forEach(cell => {
-                        solution.cells[cell.row][cell.col] = 1; // Water
+                        solution.cells[cell.row][cell.col] = 1;
                     });
                     filledWater = true;
                 } else {
-                    break; // Stop filling this aquarium with water
+                    break;
                 }
             }
             
-            // If we've filled some rows with water, try to add oil on top
+            // Then try to fill above those rows with oil.
             if (filledWater) {
-                // Find the last row we filled with water
-                let waterTopRow = rows.find(row => 
+                let waterTopRow = rows.find(row =>
                     rowGroups[row].some(cell => solution.cells[cell.row][cell.col] === 1)
                 );
-                
-                // Try to fill rows above that with oil
                 for (const row of rows) {
-                    if (row >= waterTopRow) continue; // Skip rows at or below water level
-                    
+                    if (row >= waterTopRow) continue;
                     const rowCells = rowGroups[row];
-                    
-                    // Check if we can add oil to this row
                     let canAddOil = true;
                     for (const cell of rowCells) {
-                        if (solution.cells[cell.row][cell.col] !== 0) {
-                            canAddOil = false;
-                            break;
-                        }
-                        
-                        // Check row/column constraints
-                        if (countRowType(solution.cells, cell.row, 2) >= puzzle.oilRow[cell.row] ||
+                        if (solution.cells[cell.row][cell.col] !== 0 ||
+                            countRowType(solution.cells, cell.row, 2) >= puzzle.oilRow[cell.row] ||
                             countColType(solution.cells, cell.col, 2) >= puzzle.oilCol[cell.col]) {
                             canAddOil = false;
                             break;
                         }
                     }
-                    
                     if (canAddOil) {
-                        // Add oil to all cells in this row of the aquarium
                         rowCells.forEach(cell => {
-                            solution.cells[cell.row][cell.col] = 2; // Oil
+                            solution.cells[cell.row][cell.col] = 2;
                         });
                     } else {
-                        break; // Stop filling this aquarium with oil
+                        break;
                     }
                 }
             }
         }
         
-        // Validate solution
+        // Validate the final solution.
         const isValid = validateSolution(solution, puzzle);
         solution.isValid = isValid;
-        
         return solution;
     }
     
@@ -537,68 +537,46 @@ document.addEventListener('DOMContentLoaded', function() {
         const grid = Array(puzzle.height).fill().map(() => Array(puzzle.width).fill(0));
         let changed = true;
         let iterations = 0;
-        const maxIterations = 100; // Prevent infinite loops
+        const maxIterations = 100;
         
-        // Helper function to check if a cell can be filled with a specific type
         function canFillCell(row, col, type) {
-            // Check row/column constraints
             if (type === 1 && countRowType(grid, row, 1) >= puzzle.waterRow[row]) return false;
             if (type === 1 && countColType(grid, col, 1) >= puzzle.waterCol[col]) return false;
             if (type === 2 && countRowType(grid, row, 2) >= puzzle.oilRow[row]) return false;
             if (type === 2 && countColType(grid, col, 2) >= puzzle.oilCol[col]) return false;
-            
             return true;
         }
         
-        // Process aquariums
         while (changed && iterations < maxIterations) {
             changed = false;
             iterations++;
             
-            // For each aquarium
             for (const id in aquariums) {
                 const cells = aquariums[id];
-                
-                // Group cells by row
                 const rowGroups = {};
                 cells.forEach(cell => {
-                    if (!rowGroups[cell.row]) {
-                        rowGroups[cell.row] = [];
-                    }
+                    if (!rowGroups[cell.row]) rowGroups[cell.row] = [];
                     rowGroups[cell.row].push(cell);
                 });
-                
-                // Sort rows from bottom to top
                 const sortedRows = Object.keys(rowGroups).map(Number).sort((a, b) => b - a);
                 
-                // Check if this aquarium already has water or oil
                 let hasWater = cells.some(cell => grid[cell.row][cell.col] === 1);
                 let hasOil = cells.some(cell => grid[cell.row][cell.col] === 2);
                 
-                // If aquarium has oil but no water, that's invalid
                 if (hasOil && !hasWater) {
-                    // Find lowest row with oil
-                    const oilRows = cells
-                        .filter(cell => grid[cell.row][cell.col] === 2)
-                        .map(cell => cell.row);
+                    const oilRows = cells.filter(cell => grid[cell.row][cell.col] === 2).map(cell => cell.row);
                     const lowestOilRow = Math.max(...oilRows);
-                    
-                    // Find first row below this that can hold water
                     for (const row of sortedRows) {
-                        if (row <= lowestOilRow) continue; // Only look at rows below oil
-                        
+                        if (row <= lowestOilRow) continue;
                         const rowCells = rowGroups[row];
                         let canFillRowWithWater = true;
-                        
                         for (const cell of rowCells) {
                             if (grid[cell.row][cell.col] !== 0 || !canFillCell(cell.row, cell.col, 1)) {
                                 canFillRowWithWater = false;
                                 break;
                             }
                         }
-                        
                         if (canFillRowWithWater) {
-                            // Fill this row with water
                             rowCells.forEach(cell => {
                                 grid[cell.row][cell.col] = 1;
                                 changed = true;
@@ -607,94 +585,68 @@ document.addEventListener('DOMContentLoaded', function() {
                             break;
                         }
                     }
-                    
-                    // If we still can't add water, this puzzle might be unsolvable
                     if (!hasWater) {
-                        return { solved: false };
+                        return { solved: false, grid };
                     }
                 }
                 
-                // Check rows that need to be filled to satisfy constraints
                 for (let row = 0; row < puzzle.height; row++) {
                     const rowCellsInAquarium = cells.filter(cell => cell.row === row);
                     if (rowCellsInAquarium.length === 0) continue;
                     
-                    // Check water constraints
                     const remainingWaterInRow = puzzle.waterRow[row] - countRowType(grid, row, 1);
                     const emptyRowCells = rowCellsInAquarium.filter(cell => grid[cell.row][cell.col] === 0);
-                    
                     if (remainingWaterInRow === emptyRowCells.length) {
-                        // Must fill all empty cells in this row with water
                         emptyRowCells.forEach(cell => {
                             if (canFillCell(cell.row, cell.col, 1)) {
                                 grid[cell.row][cell.col] = 1;
                                 changed = true;
-                                hasWater = true;
                             }
                         });
                     }
                     
-                    // Check oil constraints
                     const remainingOilInRow = puzzle.oilRow[row] - countRowType(grid, row, 2);
                     const updatedEmptyRowCells = rowCellsInAquarium.filter(cell => grid[cell.row][cell.col] === 0);
-                    
                     if (remainingOilInRow === updatedEmptyRowCells.length) {
-                        // Must fill all empty cells in this row with oil
                         updatedEmptyRowCells.forEach(cell => {
                             if (canFillCell(cell.row, cell.col, 2)) {
                                 grid[cell.row][cell.col] = 2;
                                 changed = true;
-                                hasOil = true;
                             }
                         });
                     }
                 }
                 
-                // Similar logic for columns
                 for (let col = 0; col < puzzle.width; col++) {
                     const colCellsInAquarium = cells.filter(cell => cell.col === col);
                     if (colCellsInAquarium.length === 0) continue;
                     
-                    // Check water constraints
                     const remainingWaterInCol = puzzle.waterCol[col] - countColType(grid, col, 1);
                     const emptyColCells = colCellsInAquarium.filter(cell => grid[cell.row][cell.col] === 0);
-                    
                     if (remainingWaterInCol === emptyColCells.length) {
-                        // Must fill all empty cells in this column with water
                         emptyColCells.forEach(cell => {
                             if (canFillCell(cell.row, cell.col, 1)) {
                                 grid[cell.row][cell.col] = 1;
                                 changed = true;
-                                hasWater = true;
                             }
                         });
                     }
                     
-                    // Check oil constraints
                     const remainingOilInCol = puzzle.oilCol[col] - countColType(grid, col, 2);
                     const updatedEmptyColCells = colCellsInAquarium.filter(cell => grid[cell.row][cell.col] === 0);
-                    
                     if (remainingOilInCol === updatedEmptyColCells.length) {
-                        // Must fill all empty cells in this column with oil
                         updatedEmptyColCells.forEach(cell => {
                             if (canFillCell(cell.row, cell.col, 2)) {
                                 grid[cell.row][cell.col] = 2;
                                 changed = true;
-                                hasOil = true;
                             }
                         });
                     }
                 }
                 
-                // If aquarium has water, enforce level water surface
                 if (hasWater) {
-                    // Find topmost row with water
-                    const waterRows = cells
-                        .filter(cell => grid[cell.row][cell.col] === 1)
-                        .map(cell => cell.row);
+                    const waterRows = cells.filter(cell => grid[cell.row][cell.col] === 1).map(cell => cell.row);
                     const topmostWaterRow = Math.min(...waterRows);
-                    
-                    // All cells in rows below or at topmost water row must be water or filled
                     for (const cell of cells) {
                         if (cell.row >= topmostWaterRow && grid[cell.row][cell.col] === 0) {
                             if (canFillCell(cell.row, cell.col, 1)) {
@@ -704,19 +656,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     }
                 }
-                
-                // If aquarium has oil, enforce level oil surface
                 if (hasOil) {
-                    // Find topmost row with oil
-                    const oilRows = cells
-                        .filter(cell => grid[cell.row][cell.col] === 2)
-                        .map(cell => cell.row);
+                    const oilRows = cells.filter(cell => grid[cell.row][cell.col] === 2).map(cell => cell.row);
                     const topmostOilRow = Math.min(...oilRows);
-                    
-                    // Find lowest row with oil
                     const lowestOilRow = Math.max(...oilRows);
-                    
-                    // All cells in rows between topmost and lowest oil row must be oil
                     for (const cell of cells) {
                         if (cell.row >= topmostOilRow && cell.row <= lowestOilRow && grid[cell.row][cell.col] === 0) {
                             if (canFillCell(cell.row, cell.col, 2)) {
@@ -729,27 +672,18 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
-        // Check if the puzzle is completely solved
         let isSolved = true;
-        
-        // Check row constraints
         for (let row = 0; row < puzzle.height; row++) {
-            const waterCount = countRowType(grid, row, 1);
-            const oilCount = countRowType(grid, row, 2);
-            
-            if (waterCount !== puzzle.waterRow[row] || oilCount !== puzzle.oilRow[row]) {
+            if (countRowType(grid, row, 1) !== puzzle.waterRow[row] ||
+                countRowType(grid, row, 2) !== puzzle.oilRow[row]) {
                 isSolved = false;
                 break;
             }
         }
-        
-        // Check column constraints
         if (isSolved) {
             for (let col = 0; col < puzzle.width; col++) {
-                const waterCount = countColType(grid, col, 1);
-                const oilCount = countColType(grid, col, 2);
-                
-                if (waterCount !== puzzle.waterCol[col] || oilCount !== puzzle.oilCol[col]) {
+                if (countColType(grid, col, 1) !== puzzle.waterCol[col] ||
+                    countColType(grid, col, 2) !== puzzle.oilCol[col]) {
                     isSolved = false;
                     break;
                 }
@@ -771,7 +705,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const { cells, width, height } = solution;
         let valid = true;
         
-        // Validate row constraints: water and oil counts must exactly match the puzzle constraints.
         for (let row = 0; row < height; row++) {
             const waterCount = countRowType(cells, row, 1);
             const oilCount = countRowType(cells, row, 2);
@@ -781,7 +714,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
-        // Validate column constraints if the rows are valid so far.
         if (valid) {
             for (let col = 0; col < width; col++) {
                 const waterCount = countColType(cells, col, 1);
@@ -796,11 +728,9 @@ document.addEventListener('DOMContentLoaded', function() {
         return valid;
     }
 
-    // Function to display the solution in the solutionGrid element
+    // Function to display solution in the solutionGrid element
     function displaySolution(solution) {
-        solutionGrid.innerHTML = '';  // Clear any previous solution
-        
-        // Set grid template to match solution dimensions
+        solutionGrid.innerHTML = '';
         solutionGrid.style.gridTemplateColumns = `repeat(${solution.width}, 40px)`;
         solutionGrid.style.gridTemplateRows = `repeat(${solution.height}, 40px)`;
         
@@ -809,7 +739,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 const cellDiv = document.createElement('div');
                 cellDiv.className = 'cell solution-cell';
                 
-                // Display a symbol or background color based on whether the cell is water (1), oil (2) or empty (0)
                 if (solution.cells[row][col] === 1) {
                     cellDiv.textContent = 'W';
                     cellDiv.classList.add('water');
@@ -824,7 +753,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
-        // Indicate whether the solution is valid
         if (solution.isValid) {
             solutionStatus.innerHTML = '<strong>Solved!</strong>';
             solutionStatus.className = 'success';
@@ -836,7 +764,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Function to reset the puzzle
     function resetPuzzle() {
-        // Clear the grid inputs (but keep the current grid dimensions)
         const cells = puzzleGrid.querySelectorAll('.cell');
         cells.forEach(cell => {
             const input = cell.querySelector('input');
@@ -846,15 +773,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 cell.textContent = '.';
             }
         });
-        
-        // Clear solution display and status message
         solutionGrid.innerHTML = '';
         solutionStatus.innerHTML = '';
         solutionStatus.className = '';
-        
-        // Enable solve button again if it was disabled
         solvePuzzleButton.disabled = false;
     }
-
-    // The rest of the code (e.g., event listeners for the buttons) remains as it is.
 });
