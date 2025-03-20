@@ -490,172 +490,172 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   
     function solveConstraints(puzzle, aquariums) {
-      const grid = Array(puzzle.height).fill().map(() => Array(puzzle.width).fill(0));
-      let changed = true;
-      let iterations = 0;
-      const maxIterations = 100;
-  
-      function canFillCell(row, col, type) {
-        if (type === 1 && countRowType(grid, row, 1) >= puzzle.waterRow[row]) return false;
-        if (type === 1 && countColType(grid, col, 1) >= puzzle.waterCol[col]) return false;
-        if (type === 2 && countRowType(grid, row, 2) >= puzzle.oilRow[row]) return false;
-        if (type === 2 && countColType(grid, col, 2) >= puzzle.oilCol[col]) return false;
-        return true;
-      }
-      while (changed && iterations < maxIterations) {
-        changed = false;
-        iterations++;
-        for (const id in aquariums) {
-          const cells = aquariums[id];
-          const rowGroups = {};
-          cells.forEach(cell => {
-            if (!rowGroups[cell.row]) rowGroups[cell.row] = [];
-            rowGroups[cell.row].push(cell);
-          });
-          const sortedRows = Object.keys(rowGroups).map(Number).sort((a, b) => b - a);
-          let hasWater = cells.some(cell => grid[cell.row][cell.col] === 1);
-          let hasOil = cells.some(cell => grid[cell.row][cell.col] === 2);
-          if (hasOil && !hasWater) {
-            const oilRows = cells.filter(cell => grid[cell.row][cell.col] === 2).map(cell => cell.row);
-            const lowestOilRow = Math.max(...oilRows);
-            for (const row of sortedRows) {
-              if (row <= lowestOilRow) continue;
-              const rowCells = rowGroups[row];
-              let canFillRowWithWater = true;
-              for (const cell of rowCells) {
-                if (grid[cell.row][cell.col] !== 0 || !canFillCell(cell.row, cell.col, 1)) {
-                  canFillRowWithWater = false;
+        const grid = Array(puzzle.height).fill().map(() => Array(puzzle.width).fill(0));
+        let changed = true;
+        let iterations = 0;
+        const maxIterations = 100;
+      
+        function canFillCell(row, col, type) {
+          if (type === 1 && countRowType(grid, row, 1) >= puzzle.waterRow[row]) return false;
+          if (type === 1 && countColType(grid, col, 1) >= puzzle.waterCol[col]) return false;
+          if (type === 2 && countRowType(grid, row, 2) >= puzzle.oilRow[row]) return false;
+          if (type === 2 && countColType(grid, col, 2) >= puzzle.oilCol[col]) return false;
+          return true;
+        }
+        while (changed && iterations < maxIterations) {
+          changed = false;
+          iterations++;
+          for (const id in aquariums) {
+            const cells = aquariums[id];
+            const rowGroups = {};
+            cells.forEach(cell => {
+              if (!rowGroups[cell.row]) rowGroups[cell.row] = [];
+              rowGroups[cell.row].push(cell);
+            });
+            const sortedRows = Object.keys(rowGroups).map(Number).sort((a, b) => b - a);
+            let hasWater = cells.some(cell => grid[cell.row][cell.col] === 1);
+            let hasOil = cells.some(cell => grid[cell.row][cell.col] === 2);
+            if (hasOil && !hasWater) {
+              const oilRows = cells.filter(cell => grid[cell.row][cell.col] === 2).map(cell => cell.row);
+              const lowestOilRow = Math.max(...oilRows);
+              for (const row of sortedRows) {
+                if (row <= lowestOilRow) continue;
+                const rowCells = rowGroups[row];
+                let canFillRowWithWater = true;
+                for (const cell of rowCells) {
+                  if (grid[cell.row][cell.col] !== 0 || !canFillCell(cell.row, cell.col, 1)) {
+                    canFillRowWithWater = false;
+                    break;
+                  }
+                }
+                if (canFillRowWithWater) {
+                  rowCells.forEach(cell => {
+                    grid[cell.row][cell.col] = 1;
+                    changed = true;
+                  });
+                  hasWater = true;
                   break;
                 }
               }
-              if (canFillRowWithWater) {
-                rowCells.forEach(cell => {
-                  grid[cell.row][cell.col] = 1;
-                  changed = true;
-                });
-                hasWater = true;
-                break;
+              if (!hasWater) {
+                return {
+                  solved: false,
+                  grid
+                };
               }
             }
-            if (!hasWater) {
-              return {
-                solved: false,
-                grid
-              };
+            for (let row = 0; row < puzzle.height; row++) {
+              const rowCellsInAquarium = cells.filter(cell => cell.row === row);
+              if (rowCellsInAquarium.length === 0) continue;
+              const remainingWaterInRow = puzzle.waterRow[row] - countRowType(grid, row, 1);
+              const emptyRowCells = rowCellsInAquarium.filter(cell => grid[cell.row][cell.col] === 0);
+              if (remainingWaterInRow === emptyRowCells.length) {
+                emptyRowCells.forEach(cell => {
+                  if (canFillCell(cell.row, cell.col, 1)) {
+                    grid[cell.row][cell.col] = 1;
+                    changed = true;
+                  }
+                });
+              }
+              const remainingOilInRow = puzzle.oilRow[row] - countRowType(grid, row, 2);
+              const updatedEmptyRowCells = rowCellsInAquarium.filter(cell => grid[cell.row][cell.col] === 0);
+              if (remainingOilInRow === updatedEmptyRowCells.length) {
+                updatedEmptyRowCells.forEach(cell => {
+                  if (canFillCell(cell.row, cell.col, 2)) {
+                    grid[cell.row][cell.col] = 2;
+                    changed = true;
+                  }
+                });
+              }
             }
-          }
-          for (let row = 0; row < puzzle.height; row++) {
-            const rowCellsInAquarium = cells.filter(cell => cell.row === row);
-            if (rowCellsInAquarium.length === 0) continue;
-            const remainingWaterInRow = puzzle.waterRow[row] - countRowType(grid, row, 1);
-            const emptyRowCells = rowCellsInAquarium.filter(cell => grid[cell.row][cell.col] === 0);
-            if (remainingWaterInRow === emptyRowCells.length) {
-              emptyRowCells.forEach(cell => {
-                if (canFillCell(cell.row, cell.col, 1)) {
-                  grid[cell.row][cell.col] = 1;
-                  changed = true;
+            for (let col = 0; col < puzzle.width; col++) {
+              const colCellsInAquarium = cells.filter(cell => cell.col === col);
+              if (colCellsInAquarium.length === 0) continue;
+              const remainingWaterInCol = puzzle.waterCol[col] - countColType(grid, col, 1);
+              const emptyColCells = colCellsInAquarium.filter(cell => grid[cell.row][cell.col] === 0);
+              if (remainingWaterInCol === emptyColCells.length) {
+                emptyColCells.forEach(cell => {
+                  if (canFillCell(cell.row, cell.col, 1)) {
+                    grid[cell.row][cell.col] = 1;
+                    changed = true;
+                  }
+                });
+              }
+              const remainingOilInCol = puzzle.oilCol[col] - countColType(grid, col, 2);
+              const updatedEmptyColCells = colCellsInAquarium.filter(cell => grid[cell.row][cell.col] === 0);
+              if (remainingOilInCol === updatedEmptyColCells.length) {
+                updatedEmptyColCells.forEach(cell => {
+                  if (canFillCell(cell.row, cell.col, 2)) {
+                    grid[cell.row][cell.col] = 2;
+                    changed = true;
+                  }
+                });
+              }
+            }
+            if (hasWater) {
+              // Find the top boundary of the water in this aquarium
+              const waterRows = cells.filter(cell => grid[cell.row][cell.col] === 1).map(cell => cell.row);
+              if (waterRows.length > 0) {
+                const waterBoundary = Math.min(...waterRows); // water fills from waterBoundary (inclusive) downward
+                for (const row of sortedRows) {
+                  // Only try filling oil in rows ABOVE the water boundary
+                  if (row < waterBoundary) {
+                    const rowCells = rowGroups[row];
+                    let canAddOil = true;
+                    // (add any necessary condition checks as before)
+                    if (canAddOil) {
+                      rowCells.forEach(cell => {
+                        grid[cell.row][cell.col] = 2;
+                      });
+                    }
+                  }
                 }
-              });
+              }
             }
-            const remainingOilInRow = puzzle.oilRow[row] - countRowType(grid, row, 2);
-            const updatedEmptyRowCells = rowCellsInAquarium.filter(cell => grid[cell.row][cell.col] === 0);
-            if (remainingOilInRow === updatedEmptyRowCells.length) {
-              updatedEmptyRowCells.forEach(cell => {
-                if (canFillCell(cell.row, cell.col, 2)) {
-                  grid[cell.row][cell.col] = 2;
-                  changed = true;
-                }
-              });
-            }
-          }
-          for (let col = 0; col < puzzle.width; col++) {
-            const colCellsInAquarium = cells.filter(cell => cell.col === col);
-            if (colCellsInAquarium.length === 0) continue;
-            const remainingWaterInCol = puzzle.waterCol[col] - countColType(grid, col, 1);
-            const emptyColCells = colCellsInAquarium.filter(cell => grid[cell.row][cell.col] === 0);
-            if (remainingWaterInCol === emptyColCells.length) {
-              emptyColCells.forEach(cell => {
-                if (canFillCell(cell.row, cell.col, 1)) {
-                  grid[cell.row][cell.col] = 1;
-                  changed = true;
-                }
-              });
-            }
-            const remainingOilInCol = puzzle.oilCol[col] - countColType(grid, col, 2);
-            const updatedEmptyColCells = colCellsInAquarium.filter(cell => grid[cell.row][cell.col] === 0);
-            if (remainingOilInCol === updatedEmptyColCells.length) {
-              updatedEmptyColCells.forEach(cell => {
-                if (canFillCell(cell.row, cell.col, 2)) {
-                  grid[cell.row][cell.col] = 2;
-                  changed = true;
-                }
-              });
-            }
-          }
-          if (hasWater) {
-            // Find the top boundary of the water in this aquarium
-            const waterRows = cells.filter(cell => solution.cells[cell.row][cell.col] === 1).map(cell => cell.row);
-            if (waterRows.length > 0) {
-              const waterBoundary = Math.min(...waterRows); // water fills from waterBoundary (inclusive) downward
-              for (const row of rows) {
-                // Only try filling oil in rows ABOVE the water boundary
-                if (row < waterBoundary) {
-                  const rowCells = rowGroups[row];
-                  let canAddOil = true;
-                  // (add any necessary condition checks as before)
-                  if (canAddOil) {
-                    rowCells.forEach(cell => {
-                      solution.cells[cell.row][cell.col] = 2;
-                    });
+            if (hasOil) {
+              const oilRows = cells
+                .filter(cell => grid[cell.row][cell.col] === 2)
+                .map(cell => cell.row);
+              // Determine the oil "level" as the lowest row index that is still oil-free (oil must fill above this level)
+              const oilLevel = Math.max(...oilRows);
+              for (const cell of cells) {
+                // If the cell is above (has a row index less than or equal to) the oilLevel, fill it with oil
+                if (cell.row <= oilLevel && grid[cell.row][cell.col] === 0) {
+                  if (canFillCell(cell.row, cell.col, 2)) {
+                    grid[cell.row][cell.col] = 2;
+                    changed = true;
                   }
                 }
               }
             }
           }
-          if (hasOil) {
-            const oilRows = cells
-              .filter(cell => grid[cell.row][cell.col] === 2)
-              .map(cell => cell.row);
-            // Determine the oil “level” as the lowest row index that is still oil-free (oil must fill above this level)
-            const oilLevel = Math.max(...oilRows);
-            for (const cell of cells) {
-              // If the cell is above (has a row index less than or equal to) the oilLevel, fill it with oil
-              if (cell.row <= oilLevel && grid[cell.row][cell.col] === 0) {
-                if (canFillCell(cell.row, cell.col, 2)) {
-                  grid[cell.row][cell.col] = 2;
-                  changed = true;
-                }
-              }
-            }
-          }
         }
-      }
-      let isSolved = true;
-      for (let row = 0; row < puzzle.height; row++) {
-        if (
-          countRowType(grid, row, 1) !== puzzle.waterRow[row] ||
-          countRowType(grid, row, 2) !== puzzle.oilRow[row]
-        ) {
-          isSolved = false;
-          break;
-        }
-      }
-      if (isSolved) {
-        for (let col = 0; col < puzzle.width; col++) {
+        let isSolved = true;
+        for (let row = 0; row < puzzle.height; row++) {
           if (
-            countColType(grid, col, 1) !== puzzle.waterCol[col] ||
-            countColType(grid, col, 2) !== puzzle.oilCol[col]
+            countRowType(grid, row, 1) !== puzzle.waterRow[row] ||
+            countRowType(grid, row, 2) !== puzzle.oilRow[row]
           ) {
             isSolved = false;
             break;
           }
         }
+        if (isSolved) {
+          for (let col = 0; col < puzzle.width; col++) {
+            if (
+              countColType(grid, col, 1) !== puzzle.waterCol[col] ||
+              countColType(grid, col, 2) !== puzzle.oilCol[col]
+            ) {
+              isSolved = false;
+              break;
+            }
+          }
+        }
+        return {
+          solved: isSolved,
+          grid
+        };
       }
-      return {
-        solved: isSolved,
-        grid
-      };
-    }
   
     function countRowType(grid, row, type) {
       return grid[row].filter(cell => cell === type).length;
