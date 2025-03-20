@@ -793,51 +793,49 @@ document.addEventListener('DOMContentLoaded', function () {
       };
     }
   
-    // Backtracking solver for when constraint propagation isn't enough
     // Improve the solveWithBacktracking function to better handle the unique constraints
-    // Improve the solveWithBacktracking function to better handle the unique constraints
-function solveWithBacktracking(puzzle, aquariums, initialGrid) {
-    const grid = JSON.parse(JSON.stringify(initialGrid)); // Deep copy
-    
-    // Find cells that are still empty
-    let emptyCells = 0;
-    for (let row = 0; row < puzzle.height; row++) {
-      for (let col = 0; col < puzzle.width; col++) {
-        if (grid[row][col] === 0) {
-          emptyCells++;
+    function solveWithBacktracking(puzzle, aquariums, initialGrid) {
+        const grid = JSON.parse(JSON.stringify(initialGrid)); // Deep copy
+        
+        // Find cells that are still empty
+        let emptyCells = 0;
+        for (let row = 0; row < puzzle.height; row++) {
+          for (let col = 0; col < puzzle.width; col++) {
+            if (grid[row][col] === 0) {
+              emptyCells++;
+            }
+          }
         }
+        
+        if (emptyCells === 0) {
+          // All cells are filled, check if the solution is valid
+          return {
+            solved: validateGrid(grid, puzzle),
+            grid: grid
+          };
+        }
+        
+        // Organize aquariums by empty cells (fewer empty cells first)
+        const remainingAquariums = [];
+        for (const id in aquariums) {
+          const cells = aquariums[id];
+          const emptyInAquarium = cells.filter(cell => grid[cell.row][cell.col] === 0).length;
+          
+          if (emptyInAquarium > 0) {
+            remainingAquariums.push({
+              id: parseInt(id),
+              cells: cells,
+              emptyCount: emptyInAquarium
+            });
+          }
+        }
+        
+        // Sort aquariums - prioritize those with fewer empty cells
+        remainingAquariums.sort((a, b) => a.emptyCount - b.emptyCount);
+        
+        // Start backtracking
+        return backtrack(grid, puzzle, remainingAquariums, 0);
       }
-    }
-    
-    if (emptyCells === 0) {
-      // All cells are filled, check if the solution is valid
-      return {
-        solved: validateGrid(grid, puzzle),
-        grid: grid
-      };
-    }
-    
-    // Organize aquariums by empty cells (fewer empty cells first)
-    const remainingAquariums = [];
-    for (const id in aquariums) {
-      const cells = aquariums[id];
-      const emptyInAquarium = cells.filter(cell => grid[cell.row][cell.col] === 0).length;
-      
-      if (emptyInAquarium > 0) {
-        remainingAquariums.push({
-          id: parseInt(id),
-          cells: cells,
-          emptyCount: emptyInAquarium
-        });
-      }
-    }
-    
-    // Sort aquariums - prioritize those with fewer empty cells
-    remainingAquariums.sort((a, b) => a.emptyCount - b.emptyCount);
-    
-    // Start backtracking
-    return backtrack(grid, puzzle, remainingAquariums, 0);
-  }
   
     // Add event listeners to trigger webhook on different actions
     function addWebhookListeners() {
@@ -877,93 +875,159 @@ function solveWithBacktracking(puzzle, aquariums, initialGrid) {
       });
   
     // Improve the backtracking solver to better handle oil/water physics
-    // Improve the backtracking solver to better handle oil/water physics
-function backtrack(grid, puzzle, aquariums, index) {
-    if (index >= aquariums.length) {
-      return {
-        solved: validateGrid(grid, puzzle),
-        grid: grid
-      };
-    }
-  
-    const aquarium = aquariums[index];
-    
-    // Get rows in this aquarium sorted by position (top to bottom)
-    const rows = [...new Set(aquarium.cells.map(cell => cell.row))].sort();
-    
-    // Try fill with water from bottom up
-    const gridWater = JSON.parse(JSON.stringify(grid));
-    let waterValid = true;
-    let waterDepth = 0; // How many rows from bottom to fill with water
-    
-    for (waterDepth = 0; waterDepth <= rows.length; waterDepth++) {
-      // Reset grid for this attempt
-      const tempGrid = JSON.parse(JSON.stringify(grid));
-      let valid = true;
+    function backtrack(grid, puzzle, aquariums, index) {
+        // If we've processed all aquariums, check if the grid is valid
+        if (index >= aquariums.length) {
+          return {
+            solved: validateGrid(grid, puzzle),
+            grid: grid
+          };
+        }
       
-      // Fill bottom waterDepth rows with water, the rest with oil
-      for (const cell of aquarium.cells) {
-        const rowIndex = rows.indexOf(cell.row);
-        const fromBottom = rows.length - rowIndex - 1;
+        const aquarium = aquariums[index];
         
-        // Decide if this cell should be water or oil
-        const cellType = fromBottom < waterDepth ? 1 : 2; // 1 = water, 2 = oil
+        // Group cells by row and sort rows from top to bottom
+        const rowGroups = {};
+        aquarium.cells.forEach(cell => {
+          if (!rowGroups[cell.row]) rowGroups[cell.row] = [];
+          rowGroups[cell.row].push(cell);
+        });
         
-        // Skip if cell already has a value that matches
-        if (tempGrid[cell.row][cell.col] === cellType) {
-          continue;
+        const rows = Object.keys(rowGroups).map(Number).sort((a, b) => a - b);
+        
+        // Try different water levels (water fills from bottom up)
+        for (let waterLevel = 0; waterLevel <= rows.length; waterLevel++) {
+          // Create a new grid for this attempt
+          const tempGrid = JSON.parse(JSON.stringify(grid));
+          let valid = true;
+          
+          // Fill aquarium according to water level
+          for (let i = 0; i < rows.length; i++) {
+            const row = rows[i];
+            // Bottom rows get water, top rows get oil
+            const cellType = i >= rows.length - waterLevel ? 1 : 2; // 1 = water, 2 = oil
+            
+            // Apply to all cells in this row of the aquarium
+            for (const cell of rowGroups[row]) {
+              // Skip if already filled with the same type
+              if (tempGrid[cell.row][cell.col] === cellType) continue;
+              
+              // If cell already has a different value, this configuration is invalid
+              if (tempGrid[cell.row][cell.col] !== 0 && tempGrid[cell.row][cell.col] !== cellType) {
+                valid = false;
+                break;
+              }
+              
+              // Check if adding this would violate row/column constraints
+              if (cellType === 1 && countRowType(tempGrid, cell.row, 1) >= puzzle.waterRow[cell.row]) {
+                valid = false;
+                break;
+              }
+              if (cellType === 2 && countRowType(tempGrid, cell.row, 2) >= puzzle.oilRow[cell.row]) {
+                valid = false;
+                break;
+              }
+              if (cellType === 1 && countColType(tempGrid, cell.col, 1) >= puzzle.waterCol[cell.col]) {
+                valid = false;
+                break;
+              }
+              if (cellType === 2 && countColType(tempGrid, cell.col, 2) >= puzzle.oilCol[cell.col]) {
+                valid = false;
+                break;
+              }
+              
+              // Assign the cell type
+              tempGrid[cell.row][cell.col] = cellType;
+            }
+            
+            if (!valid) break;
+          }
+          
+          // If this configuration is valid, continue with next aquarium
+          if (valid) {
+            const result = backtrack(tempGrid, puzzle, aquariums, index + 1);
+            if (result.solved) {
+              return result;
+            }
+          }
         }
         
-        // Check if this assignment would contradict existing value
-        if (tempGrid[cell.row][cell.col] !== 0 && tempGrid[cell.row][cell.col] !== cellType) {
-          valid = false;
-          break;
-        }
-        
-        // Check if this assignment would exceed row/column constraints
-        if (cellType === 1 && 
-            countRowType(tempGrid, cell.row, 1) >= puzzle.waterRow[cell.row]) {
-          valid = false;
-          break;
-        }
-        
-        if (cellType === 2 && 
-            countRowType(tempGrid, cell.row, 2) >= puzzle.oilRow[cell.row]) {
-          valid = false;
-          break;
-        }
-        
-        if (cellType === 1 && 
-            countColType(tempGrid, cell.col, 1) >= puzzle.waterCol[cell.col]) {
-          valid = false;
-          break;
-        }
-        
-        if (cellType === 2 && 
-            countColType(tempGrid, cell.col, 2) >= puzzle.oilCol[cell.col]) {
-          valid = false;
-          break;
-        }
-        
-        // Assign the value
-        tempGrid[cell.row][cell.col] = cellType;
+        // If no valid configuration was found
+        return {
+          solved: false,
+          grid: grid
+        };
       }
       
-      if (valid) {
-        // Try to solve the rest of the puzzle with this configuration
-        const result = backtrack(tempGrid, puzzle, aquariums, index + 1);
-        if (result.solved) {
-          return result;
+      // Add this missing function to validate grid during backtracking
+      function validateGrid(grid, puzzle) {
+        // Check row constraints
+        for (let row = 0; row < puzzle.height; row++) {
+          const waterCount = countRowType(grid, row, 1);
+          const oilCount = countRowType(grid, row, 2);
+          // Check if cells are all filled and constraints are satisfied
+          if (waterCount + oilCount < puzzle.width) return false; // Not all cells filled
+          if (waterCount !== puzzle.waterRow[row] || oilCount !== puzzle.oilRow[row]) return false;
         }
+        
+        // Check column constraints
+        for (let col = 0; col < puzzle.width; col++) {
+          const waterCount = countColType(grid, col, 1);
+          const oilCount = countColType(grid, col, 2);
+          if (waterCount !== puzzle.waterCol[col] || oilCount !== puzzle.oilCol[col]) return false;
+        }
+        
+        // Check aquarium physics (oil floats on water)
+        const aquariumContents = {};
+        
+        // Group cells by aquarium ID
+        for (let row = 0; row < puzzle.height; row++) {
+          for (let col = 0; col < puzzle.width; col++) {
+            const aquariumId = puzzle.aquariums[row][col];
+            if (aquariumId > 0) {
+              if (!aquariumContents[aquariumId]) {
+                aquariumContents[aquariumId] = [];
+              }
+              aquariumContents[aquariumId].push({
+                row, col, type: grid[row][col]
+              });
+            }
+          }
+        }
+        
+        // Check each aquarium for horizontal levels and oil above water
+        for (const id in aquariumContents) {
+          const aquarium = aquariumContents[id];
+          
+          // Group by row
+          const rowContents = {};
+          aquarium.forEach(cell => {
+            if (!rowContents[cell.row]) rowContents[cell.row] = [];
+            rowContents[cell.row].push(cell.type);
+          });
+          
+          // Check for horizontal levels (same type in each row)
+          for (const row in rowContents) {
+            const types = new Set(rowContents[row]);
+            if (types.size > 1) return false; // Mixed oil and water in same row
+          }
+          
+          // Check for oil floating on water (oil above, water below)
+          let foundWater = false;
+          const sortedRows = Object.keys(rowContents).map(Number).sort((a, b) => a - b);
+          
+          for (const row of sortedRows) {
+            const type = rowContents[row][0]; // All cells in this row are the same type
+            if (type === 1) { // Water
+              foundWater = true;
+            } else if (type === 2 && foundWater) { // Oil below water
+              return false;
+            }
+          }
+        }
+        
+        return true;
       }
-    }
-    
-    // No solution found
-    return {
-      solved: false,
-      grid: grid
-    };
-  }
   
     function countRowType(grid, row, type) {
       return grid[row].filter(cell => cell === type).length;
@@ -973,94 +1037,91 @@ function backtrack(grid, puzzle, aquariums, index) {
       return grid.map(row => row[col]).filter(cell => cell === type).length;
     }
   
-    // Fix the validateSolution function to properly check the physics of oil and water
-        function validateSolution(solution, puzzle) {
-            const { cells, width, height } = solution;
-        
-            // Check for any empty cells
-            for (let row = 0; row < height; row++) {
-            for (let col = 0; col < width; col++) {
-                if (cells[row][col] === 0) {
-                return false; // Incomplete solution
-                }
+    function validateSolution(solution, puzzle) {
+        const { cells, width, height } = solution;
+      
+        // Check for any empty cells
+        for (let row = 0; row < height; row++) {
+          for (let col = 0; col < width; col++) {
+            if (cells[row][col] === 0) {
+              return false; // Incomplete solution
             }
-            }
-        
-            // Check rows
-            for (let row = 0; row < height; row++) {
-            const waterCount = countRowType(cells, row, 1);
-            const oilCount = countRowType(cells, row, 2);
-            if (waterCount !== puzzle.waterRow[row] || oilCount !== puzzle.oilRow[row]) {
-                return false;
-            }
-            }
-        
-            // Check columns
-            for (let col = 0; col < width; col++) {
-            const waterCount = countColType(cells, col, 1);
-            const oilCount = countColType(cells, col, 2);
-            if (waterCount !== puzzle.waterCol[col] || oilCount !== puzzle.oilCol[col]) {
-                return false;
-            }
-            }
-        
-            // Check aquarium constraints (oil above water)
-            const aquariums = {};
-            for (let row = 0; row < height; row++) {
-            for (let col = 0; col < width; col++) {
-                const aid = puzzle.aquariums[row][col];
-                if (aid) {
-                if (!aquariums[aid]) {
-                    aquariums[aid] = [];
-                }
-                aquariums[aid].push({
-                    row,
-                    col,
-                    type: cells[row][col]
-                });
-                }
-            }
-            }
-        
-            for (const id in aquariums) {
-            const aquarium = aquariums[id];
-            
-            // For each row in the aquarium, check if there's a mix of oil and water
-            const rowContents = {};
-            
-            // Group cells by row
-            aquarium.forEach(cell => {
-                if (!rowContents[cell.row]) {
-                rowContents[cell.row] = [];
-                }
-                rowContents[cell.row].push(cell.type);
-            });
-            
-            // Check if any row has both oil and water (invalid mixing)
-            for (const row in rowContents) {
-                const unique = [...new Set(rowContents[row])];
-                if (unique.length > 1) {
-                return false; // Mixed oil and water in same row of an aquarium
-                }
-            }
-            
-            // Check if oil floats on top of water
-            let foundWater = false;
-            for (let row = 0; row < height; row++) {
-                const cellsInRow = aquarium.filter(cell => cell.row === row);
-                if (cellsInRow.length === 0) continue;
-                
-                const type = cellsInRow[0].type;
-                if (type === 1) { // Water
-                foundWater = true;
-                } else if (type === 2 && foundWater) { // Oil below water
-                return false;
-                }
-            }
-            }
-        
-            return true;
+          }
         }
+      
+        // Check rows
+        for (let row = 0; row < height; row++) {
+          const waterCount = countRowType(cells, row, 1);
+          const oilCount = countRowType(cells, row, 2);
+          if (waterCount !== puzzle.waterRow[row] || oilCount !== puzzle.oilRow[row]) {
+            return false;
+          }
+        }
+      
+        // Check columns
+        for (let col = 0; col < width; col++) {
+          const waterCount = countColType(cells, col, 1);
+          const oilCount = countColType(cells, col, 2);
+          if (waterCount !== puzzle.waterCol[col] || oilCount !== puzzle.oilCol[col]) {
+            return false;
+          }
+        }
+      
+        // Check aquarium constraints (oil above water)
+        const aquariums = {};
+        for (let row = 0; row < height; row++) {
+          for (let col = 0; col < width; col++) {
+            const aid = puzzle.aquariums[row][col];
+            if (aid) {
+              if (!aquariums[aid]) {
+                aquariums[aid] = [];
+              }
+              aquariums[aid].push({
+                row,
+                col,
+                type: cells[row][col]
+              });
+            }
+          }
+        }
+      
+        for (const id in aquariums) {
+          const aquarium = aquariums[id];
+          
+          // Group cells by row
+          const rowContents = {};
+          aquarium.forEach(cell => {
+            if (!rowContents[cell.row]) {
+              rowContents[cell.row] = [];
+            }
+            rowContents[cell.row].push(cell.type);
+          });
+          
+          // Check if any row has both oil and water (invalid mixing)
+          for (const row in rowContents) {
+            const unique = [...new Set(rowContents[row])];
+            if (unique.length > 1) {
+              return false; // Mixed oil and water in same row of an aquarium
+            }
+          }
+          
+          // Check if oil floats on top of water
+          // First sort rows from top to bottom
+          const sortedRows = Object.keys(rowContents).map(Number).sort((a, b) => a - b);
+          
+          let foundWater = false;
+          for (const row of sortedRows) {
+            const type = rowContents[row][0]; // All cells in this row have the same type
+            if (type === 1) { // Water
+              foundWater = true;
+            } else if (type === 2 && foundWater) { // Oil below water
+              return false;
+            }
+          }
+        }
+      
+        return true;
+      }
   
     // Then modify the displaySolution function to call this when a valid solution is found
     // Modify the displaySolution function to trigger the webhook
