@@ -287,14 +287,14 @@ document.addEventListener('DOMContentLoaded', function() {
       for (let row = 0; row < puzzle.height; row++) {
         if (puzzle.oilRow[row] + puzzle.waterRow[row] > puzzle.width) {
           throw new Error(
-            `Row ${row + 2} has ${puzzle.oilRow[row]} oil and ${puzzle.waterRow[row]} water, exceeding the available ${puzzle.width} cells`
+            `Row ${row + 2} has ${puzzle.oilRow[row]} oil and ${puzzle.waterRow[row]} water, exceeding the available ${puzzle.width} cells!`
           );
         }
       }
       for (let col = 0; col < puzzle.width; col++) {
         if (puzzle.oilCol[col] + puzzle.waterCol[col] > puzzle.height) {
           throw new Error(
-            `Column ${col + 2} has ${puzzle.oilCol[col]} oil and ${puzzle.waterCol[col]} water, exceeding the available ${puzzle.height} cells`
+            `Column ${col + 2} has ${puzzle.oilCol[col]} oil and ${puzzle.waterCol[col]} water, exceeding the available ${puzzle.height} cells!`
           );
         }
       }
