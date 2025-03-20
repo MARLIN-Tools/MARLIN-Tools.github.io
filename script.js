@@ -383,32 +383,31 @@ document.addEventListener('DOMContentLoaded', function () {
   
     // The solving functions (which use constraint propagation and a heuristic aquarium fill)
     function solvePuzzle(puzzle) {
-      const solution = {
-        width: puzzle.width,
-        height: puzzle.height,
-        cells: Array(puzzle.height).fill().map(() => Array(puzzle.width).fill(0))
-      };
-      const aquariums = {};
-      for (let row = 0; row < puzzle.height; row++) {
-        for (let col = 0; col < puzzle.width; col++) {
-          const aid = puzzle.aquariums[row][col];
-          if (aid) {
-            if (!aquariums[aid]) {
-              aquariums[aid] = [];
-            }
-            aquariums[aid].push({
-              row,
-              col
-            });
-          }
-        }
-      }
-      const solveResult = solveConstraints(puzzle, aquariums);
-      if (solveResult.solved) {
-        solution.cells = solveResult.grid;
-        solution.isValid = true;
-        return solution;
-      }
+            // Create the solution object up front so it’s available everywhere
+            const solution = {
+             width: puzzle.width,
+             height: puzzle.height,
+             cells: Array(puzzle.height).fill().map(() => Array(puzzle.width).fill(0))
+            };
+        const aquariums = {};
+            for (let row = 0; row < puzzle.height; row++) {
+             for (let col = 0; col < puzzle.width; col++) {
+              const aid = puzzle.aquariums[row][col];
+              if (aid) {
+               if (!aquariums[aid]) {
+                aquariums[aid] = [];
+               }
+               aquariums[aid].push({ row, col });
+              }
+             }
+            }
+      // Perform constraint propagation
+    const solveResult = solveConstraints(puzzle, aquariums);
+    if (solveResult.solved) {
+     solution.cells = solveResult.grid;
+     solution.isValid = true;
+     return solution;
+    }
       // If needed, a heuristic fill is used.
       const sortedAquariums = Object.entries(aquariums)
         .map(([id, cells]) => {
