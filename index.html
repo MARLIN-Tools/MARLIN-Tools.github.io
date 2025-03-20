@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Density Aquarium Puzzle Solver</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Density Aquarium Puzzle Solver</h1>
+        
+        <div class="description">
+            <h2>How the puzzle works:</h2>
+            <ul>
+                <li>The first two columns and rows are indicators for oil and water in each row/column.</li>
+                <li>The top row/left column indicate oil (red), while the bottom row/right column indicate water (blue).</li>
+                <li>Other numbers indicate which aquarium (cell group) each cell belongs to.</li>
+                <li>Aquariums are contained groups of cells which can hold water and oil.</li>
+                <li>Due to gravity, the water or oil level in any given aquarium will be level horizontally.</li>
+                <li>Due to density, oil floats on water. Oil will never be below water.</li>
+                <li>Every aquarium with oil must also contain water (oil can't exist alone).</li>
+                <li>Not all aquariums need to be filled completely - some may even be empty.</li>
+            </ul>
+        </div>
+        
+        <div class="input-section">
+            <h2>Input Puzzle</h2>
+            
+            <div class="input-methods">
+                <div class="method-tabs">
+                    <button class="tab-button active" data-target="grid-input">Grid Input</button>
+                    <button class="tab-button" data-target="text-input">Text Input</button>
+                </div>
+                
+                <div id="grid-input" class="input-method active">
+                    <div class="grid-size-control">
+                        <label for="grid-width">Width:</label>
+                        <input type="number" id="grid-width" min="3" max="20" value="10">
+                        
+                        <label for="grid-height">Height:</label>
+                        <input type="number" id="grid-height" min="3" max="20" value="10">
+                        
+                        <button id="generate-grid">Generate Grid</button>
+                    </div>
+                    
+                    <div class="grid-container">
+                        <div id="puzzle-grid" class="grid"></div>
+                    </div>
+                </div>
+                
+                <div id="text-input" class="input-method">
+                    <p>Paste your puzzle data below (tab or space separated):</p>
+                    <textarea id="puzzle-text" rows="15" cols="60"></textarea>
+                    <button id="parse-text">Parse Text</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button id="solve-puzzle" disabled>Solve Puzzle</button>
+            <button id="reset-puzzle">Reset</button>
+        </div>
+        
+        <div class="solution-section">
+            <h2>Solution</h2>
+            <div id="solution-grid" class="grid"></div>
+            <div id="solution-status"></div>
+        </div>
+
+        <div class="footer">
+            <p>Created by <a href="https://github.com/MARLIN-Tools" target="_blank">Your GitHub Username</a></p>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>
