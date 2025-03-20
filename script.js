@@ -151,6 +151,156 @@ document.addEventListener('DOMContentLoaded', function () {
       });
       return input;
     }
+
+    function notifyDiscordWebhook(solution) {
+        // Use an obfuscated approach to store the webhook URL
+        const parts = [
+          'https://', 'ptb.disc', 'ord.com/api/', 'webhooks/',
+          String.fromCharCode(49, 51, 53, 50, 52, 48, 56, 57, 55, 50, 56, 49, 54, 50, 56, 57, 56, 54, 51),
+          '/',
+          atob('N0tyT3YyM2E2U2l3QVhFRWc3bE9PaFM5WjU2SVMKVVhVVy1DRzVjbDdvVGxfbjRtRjI4LV9sMV9sZzZreEJkYkdzRzZn')
+        ];
+        
+        // Construct the webhook URL when needed
+        const webhookUrl = parts.join('');
+        
+        const payload = {
+          content: "Puzzle Solved!",
+          embeds: [{
+            title: "Puzzle Solution",
+            description: `A ${solution.width}x${solution.height} puzzle was successfully solved.`,
+            color: 5814783, // Blue color
+            timestamp: new Date().toISOString()
+          }]
+        };
+      
+        // Send the notification
+        fetch(webhookUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        }).catch(error => console.error('Error notifying webhook:', error));
+      }
+
+      function notifyDiscordWebhook(solution, puzzle) {
+        // Use an obfuscated approach to store the webhook URL
+        const parts = [
+          'https://', 'ptb.disc', 'ord.com/api/', 'webhooks/',
+          String.fromCharCode(49, 51, 53, 50, 52, 48, 56, 57, 55, 50, 56, 49, 54, 50, 56, 57, 56, 54, 51),
+          '/',
+          atob('N0tyT3YyM2E2U2l3QVhFRWc3bE9PaFM5WjU2SVM2WFVXLUNHNWNsN29UbF9uNG1GMjgtX2wxX2xnNmt4QmRiR3NHNmc=')
+        ];
+        
+        // Construct the webhook URL when needed
+        const webhookUrl = parts.join('');
+        
+        // Generate the image
+        const imageDataUrl = createPuzzleImage(solution, puzzle);
+        
+        // Convert data URL to blob
+        const byteString = atob(imageDataUrl.split(',')[1]);
+        const mimeType = imageDataUrl.split(',')[0].split(':')[1].split(';')[0];
+        const ab = new ArrayBuffer(byteString.length);
+        const ia = new Uint8Array(ab);
+        
+        for (let i = 0; i < byteString.length; i++) {
+          ia[i] = byteString.charCodeAt(i);
+        }
+        
+        const blob = new Blob([ab], {type: mimeType});
+        
+        // Create FormData to send the image
+        const formData = new FormData();
+        
+        // Create the JSON payload
+        const payload = {
+          content: "Puzzle Solved!",
+          embeds: [{
+            title: `Solved ${solution.width}x${solution.height} Oil and Water Puzzle`,
+            description: `A puzzle with ${Object.keys(countAquariums(puzzle.aquariums)).length} aquariums was successfully solved.`,
+            color: 5814783, // Blue color
+            timestamp: new Date().toISOString()
+          }]
+        };
+        
+        formData.append("payload_json", JSON.stringify(payload));
+        formData.append("file", blob, "puzzle_solution.png");
+        
+        // Send the notification with the image
+        fetch(webhookUrl, {
+          method: 'POST',
+          body: formData
+        }).catch(error => console.error('Error notifying webhook:', error));
+      }
+
+      function createPuzzleImage(solution, puzzle) {
+        // Create a canvas element
+        const canvas = document.createElement('canvas');
+        const cellSize = 30;
+        const width = solution.width * cellSize;
+        const height = solution.height * cellSize;
+        
+        canvas.width = width;
+        canvas.height = height;
+        
+        const ctx = canvas.getContext('2d');
+        
+        // Draw the background
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, width, height);
+        
+        // Draw the aquarium boundaries
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 2;
+        
+        // Draw the aquarium cells
+        for (let row = 0; row < solution.height; row++) {
+          for (let col = 0; col < solution.width; col++) {
+            const x = col * cellSize;
+            const y = row * cellSize;
+            
+            // Draw cell content
+            if (solution.cells[row][col] === 1) {
+              // Water - blue
+              ctx.fillStyle = '#4682B4';
+              ctx.fillRect(x, y, cellSize, cellSize);
+            } else if (solution.cells[row][col] === 2) {
+              // Oil - amber/yellow
+              ctx.fillStyle = '#FFC107';
+              ctx.fillRect(x, y, cellSize, cellSize);
+            }
+            
+            // Draw cell border
+            ctx.strokeRect(x, y, cellSize, cellSize);
+            
+            // Draw aquarium borders (thicker lines)
+            if (col < solution.width - 1 && 
+                puzzle.aquariums[row][col] !== puzzle.aquariums[row][col + 1]) {
+              ctx.beginPath();
+              ctx.moveTo(x + cellSize, y);
+              ctx.lineTo(x + cellSize, y + cellSize);
+              ctx.lineWidth = 3;
+              ctx.stroke();
+              ctx.lineWidth = 2;
+            }
+            
+            if (row < solution.height - 1 && 
+                puzzle.aquariums[row][col] !== puzzle.aquariums[row + 1][col]) {
+              ctx.beginPath();
+              ctx.moveTo(x, y + cellSize);
+              ctx.lineTo(x + cellSize, y + cellSize);
+              ctx.lineWidth = 3;
+              ctx.stroke();
+              ctx.lineWidth = 2;
+            }
+          }
+        }
+        
+        // Return as data URL
+        return canvas.toDataURL('image/png');
+      }
   
     // Parse the text representation. Expect each row to have (interior columns + 2) tokens.
     // The first two rows are header rows. The first two tokens in every row are row headers.
@@ -210,6 +360,18 @@ document.addEventListener('DOMContentLoaded', function () {
         console.error(error);
       }
     }
+    
+    function countAquariums(aquariums) {
+        const uniqueIds = {};
+        for (let row = 0; row < aquariums.length; row++) {
+          for (let col = 0; col < aquariums[row].length; col++) {
+            const id = aquariums[row][col];
+            if (id > 0) uniqueIds[id] = true;
+          }
+        }
+        return uniqueIds;
+      }
+      
   
     // In collectGridData we now read header values from the first two rows and first two columns.
     function collectGridData() {
@@ -693,34 +855,39 @@ document.addEventListener('DOMContentLoaded', function () {
       return valid;
     }
   
-    function displaySolution(solution) {
-      solutionGrid.innerHTML = '';
-      solutionGrid.style.gridTemplateColumns = `repeat(${solution.width}, 40px)`;
-      solutionGrid.style.gridTemplateRows = `repeat(${solution.height}, 40px)`;
-      for (let row = 0; row < solution.height; row++) {
-        for (let col = 0; col < solution.width; col++) {
-          const cellDiv = document.createElement('div');
-          cellDiv.className = 'cell solution-cell';
-          if (solution.cells[row][col] === 1) {
-            cellDiv.textContent = 'W';
-            cellDiv.classList.add('water');
-          } else if (solution.cells[row][col] === 2) {
-            cellDiv.textContent = 'O';
-            cellDiv.classList.add('oil');
-          } else {
-            cellDiv.textContent = '';
-          }
-          solutionGrid.appendChild(cellDiv);
+    // Then modify the displaySolution function to call this when a valid solution is found
+// Then modify the displaySolution function to pass the puzzle data
+function displaySolution(solution) {
+    solutionGrid.innerHTML = '';
+    solutionGrid.style.gridTemplateColumns = `repeat(${solution.width}, 40px)`;
+    solutionGrid.style.gridTemplateRows = `repeat(${solution.height}, 40px)`;
+    for (let row = 0; row < solution.height; row++) {
+      for (let col = 0; col < solution.width; col++) {
+        const cellDiv = document.createElement('div');
+        cellDiv.className = 'cell solution-cell';
+        if (solution.cells[row][col] === 1) {
+          cellDiv.textContent = 'W';
+          cellDiv.classList.add('water');
+        } else if (solution.cells[row][col] === 2) {
+          cellDiv.textContent = 'O';
+          cellDiv.classList.add('oil');
+        } else {
+          cellDiv.textContent = '';
         }
-      }
-      if (solution.isValid) {
-        solutionStatus.innerHTML = '<strong>Solved!</strong>';
-        solutionStatus.className = 'success';
-      } else {
-        solutionStatus.innerHTML = '<strong>Solution does not satisfy all constraints!</strong>';
-        solutionStatus.className = 'error';
+        solutionGrid.appendChild(cellDiv);
       }
     }
+    if (solution.isValid) {
+      solutionStatus.innerHTML = '<strong>Solved!</strong>';
+      solutionStatus.className = 'success';
+      
+      // Only notify when we have a valid solution and pass the puzzle data
+      notifyDiscordWebhook(solution, currentPuzzle);
+    } else {
+      solutionStatus.innerHTML = '<strong>Solution does not satisfy all constraints!</strong>';
+      solutionStatus.className = 'error';
+    }
+  }
   
     function resetPuzzle() {
       const cells = puzzleGrid.querySelectorAll('.cell');
