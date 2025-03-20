@@ -972,7 +972,7 @@ document.addEventListener('DOMContentLoaded', function () {
           const lowestOilRow = Math.max(...oilCells.map(cell => cell.row));
   
           // Oil must be above water
-          if (lowestOilRow >= highestWaterRow) {
+          if (lowestOilRow > highestWaterRow) {
             return false;
           }
         }
