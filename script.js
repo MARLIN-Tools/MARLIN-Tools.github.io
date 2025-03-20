@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     // DOM elements
     const gridWidthInput = document.getElementById('grid-width');
     const gridHeightInput = document.getElementById('grid-height');
@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', function() {
   
     // Tab switching (if you have multiple views)
     tabButtons.forEach(button => {
-      button.addEventListener('click', function() {
+      button.addEventListener('click', function () {
         const targetId = this.getAttribute('data-target');
         tabButtons.forEach(btn => btn.classList.remove('active'));
         this.classList.add('active');
@@ -35,7 +35,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   
     // Event listeners
-    generateGridButton.addEventListener('click', function() {
+    generateGridButton.addEventListener('click', function () {
       // Use the interior grid dimensions entered by the user.
       puzzleWidth = parseInt(gridWidthInput.value) || 10;
       puzzleHeight = parseInt(gridHeightInput.value) || 10;
@@ -46,11 +46,11 @@ document.addEventListener('DOMContentLoaded', function() {
       generateGrid(puzzleWidth, puzzleHeight);
     });
   
-    parseTextButton.addEventListener('click', function() {
+    parseTextButton.addEventListener('click', function () {
       parsePuzzleText(puzzleText.value);
     });
   
-    solvePuzzleButton.addEventListener('click', function() {
+    solvePuzzleButton.addEventListener('click', function () {
       try {
         currentPuzzle = collectGridData();
         if (validatePuzzleInput(currentPuzzle)) {
@@ -71,7 +71,7 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
   
-    resetPuzzleButton.addEventListener('click', function() {
+    resetPuzzleButton.addEventListener('click', function () {
       resetPuzzle();
     });
   
@@ -90,7 +90,7 @@ document.addEventListener('DOMContentLoaded', function() {
         for (let col = 0; col < width + 2; col++) {
           const cell = document.createElement('div');
           cell.className = 'cell';
-          
+  
           // Top-left corner (first two cells in first two rows)
           if (row < 2 && col < 2) {
             cell.classList.add('header');
@@ -146,7 +146,7 @@ document.addEventListener('DOMContentLoaded', function() {
       input.type = 'text';
       input.maxLength = 3;
       // Allow only numbers (empty is allowed, later treated as zero)
-      input.addEventListener('input', function() {
+      input.addEventListener('input', function () {
         this.value = this.value.replace(/[^0-9]/g, '');
       });
       return input;
@@ -173,7 +173,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         gridWidthInput.value = width;
         gridHeightInput.value = height;
-        
+  
         generateGrid(width, height);
         const cells = puzzleGrid.querySelectorAll('.cell');
         // Process each line of the text.
@@ -218,11 +218,11 @@ document.addEventListener('DOMContentLoaded', function() {
       const puzzle = {
         width,
         height,
-        oilCol: Array(width).fill(0),    // Column headers from row 0 (oil)
-        waterCol: Array(width).fill(0),  // Column headers from row 1 (water)
-        oilRow: Array(height).fill(0),   // Row headers from col0 (oil) for interior rows
+        oilCol: Array(width).fill(0), // Column headers from row 0 (oil)
+        waterCol: Array(width).fill(0), // Column headers from row 1 (water)
+        oilRow: Array(height).fill(0), // Row headers from col0 (oil) for interior rows
         waterRow: Array(height).fill(0), // Row headers from col1 (water)
-        aquariums: []                   // The aquarium layout (interior cells)
+        aquariums: [] // The aquarium layout (interior cells)
       };
   
       function safeParse(val) {
@@ -243,7 +243,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const input = cells[cellIndex].querySelector('input');
         puzzle.waterCol[col - 2] = safeParse(input ? input.value : '');
       }
-      
+  
       // Row headers: for rows 2 to (height+1), read first two columns.
       for (let row = 2; row < height + 2; row++) {
         // Oil counts from column 0.
@@ -255,7 +255,7 @@ document.addEventListener('DOMContentLoaded', function() {
         input = cells[cellIndex].querySelector('input');
         puzzle.waterRow[row - 2] = safeParse(input ? input.value : '');
       }
-      
+  
       // The interior aquarium grid: rows 2...(height+1), columns 2...(width+1).
       puzzle.aquariums = Array(height).fill().map(() => Array(width).fill(0));
       for (let row = 0; row < height; row++) {
@@ -321,7 +321,8 @@ document.addEventListener('DOMContentLoaded', function() {
       const width = aquariums[0].length;
       const visited = Array(height).fill().map(() => Array(width).fill(false));
       let foundCells = 0;
-      let startRow = -1, startCol = -1;
+      let startRow = -1,
+        startCol = -1;
       for (let row = 0; row < height; row++) {
         for (let col = 0; col < width; col++) {
           if (aquariums[row][col] === id) {
@@ -333,17 +334,42 @@ document.addEventListener('DOMContentLoaded', function() {
         if (startRow !== -1) break;
       }
       if (startRow === -1) return true;
-      const stack = [{ row: startRow, col: startCol }];
-      const directions = [{ dr: -1, dc: 0 }, { dr: 1, dc: 0 }, { dr: 0, dc: -1 }, { dr: 0, dc: 1 }];
+      const stack = [{
+        row: startRow,
+        col: startCol
+      }];
+      const directions = [{
+        dr: -1,
+        dc: 0
+      }, {
+        dr: 1,
+        dc: 0
+      }, {
+        dr: 0,
+        dc: -1
+      }, {
+        dr: 0,
+        dc: 1
+      }];
       while (stack.length > 0) {
-        const { row, col } = stack.pop();
+        const {
+          row,
+          col
+        } = stack.pop();
         if (row < 0 || row >= height || col < 0 || col >= width || visited[row][col] || aquariums[row][col] !== id) {
           continue;
         }
         visited[row][col] = true;
         foundCells++;
-        for (const { dr, dc } of directions) {
-          stack.push({ row: row + dr, col: col + dc });
+        for (const {
+            dr,
+            dc
+          }
+          of directions) {
+          stack.push({
+            row: row + dr,
+            col: col + dc
+          });
         }
       }
       let totalCells = 0;
@@ -370,7 +396,10 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!aquariums[aid]) {
               aquariums[aid] = [];
             }
-            aquariums[aid].push({ row, col });
+            aquariums[aid].push({
+              row,
+              col
+            });
           }
         }
       }
@@ -384,11 +413,17 @@ document.addEventListener('DOMContentLoaded', function() {
       const sortedAquariums = Object.entries(aquariums)
         .map(([id, cells]) => {
           const bottomRow = Math.max(...cells.map(cell => cell.row));
-          return { id: parseInt(id), cells, bottomRow };
+          return {
+            id: parseInt(id),
+            cells,
+            bottomRow
+          };
         })
         .sort((a, b) => b.bottomRow - a.bottomRow);
       for (const aquarium of sortedAquariums) {
-        const { cells } = aquarium;
+        const {
+          cells
+        } = aquarium;
         const rowGroups = {};
         cells.forEach(cell => {
           if (!rowGroups[cell.row]) rowGroups[cell.row] = [];
@@ -424,6 +459,10 @@ document.addEventListener('DOMContentLoaded', function() {
           );
           for (const row of rows) {
             if (row >= waterTopRow) continue;
+            // then try to add oil in that row…
+          }
+          for (const row of rows) {
+            if (row >= waterTopRow) continue;
             const rowCells = rowGroups[row];
             let canAddOil = true;
             for (const cell of rowCells) {
@@ -456,6 +495,7 @@ document.addEventListener('DOMContentLoaded', function() {
       let changed = true;
       let iterations = 0;
       const maxIterations = 100;
+  
       function canFillCell(row, col, type) {
         if (type === 1 && countRowType(grid, row, 1) >= puzzle.waterRow[row]) return false;
         if (type === 1 && countColType(grid, col, 1) >= puzzle.waterCol[col]) return false;
@@ -499,7 +539,10 @@ document.addEventListener('DOMContentLoaded', function() {
               }
             }
             if (!hasWater) {
-              return { solved: false, grid };
+              return {
+                solved: false,
+                grid
+              };
             }
           }
           for (let row = 0; row < puzzle.height; row++) {
@@ -551,23 +594,34 @@ document.addEventListener('DOMContentLoaded', function() {
             }
           }
           if (hasWater) {
-            const waterRows = cells.filter(cell => grid[cell.row][cell.col] === 1).map(cell => cell.row);
-            const topmostWaterRow = Math.min(...waterRows);
-            for (const cell of cells) {
-              if (cell.row >= topmostWaterRow && grid[cell.row][cell.col] === 0) {
-                if (canFillCell(cell.row, cell.col, 1)) {
-                  grid[cell.row][cell.col] = 1;
-                  changed = true;
+            // Find the top boundary of the water in this aquarium
+            const waterRows = cells.filter(cell => solution.cells[cell.row][cell.col] === 1).map(cell => cell.row);
+            if (waterRows.length > 0) {
+              const waterBoundary = Math.min(...waterRows); // water fills from waterBoundary (inclusive) downward
+              for (const row of rows) {
+                // Only try filling oil in rows ABOVE the water boundary
+                if (row < waterBoundary) {
+                  const rowCells = rowGroups[row];
+                  let canAddOil = true;
+                  // (add any necessary condition checks as before)
+                  if (canAddOil) {
+                    rowCells.forEach(cell => {
+                      solution.cells[cell.row][cell.col] = 2;
+                    });
+                  }
                 }
               }
             }
           }
           if (hasOil) {
-            const oilRows = cells.filter(cell => grid[cell.row][cell.col] === 2).map(cell => cell.row);
-            const topmostOilRow = Math.min(...oilRows);
-            const lowestOilRow = Math.max(...oilRows);
+            const oilRows = cells
+              .filter(cell => grid[cell.row][cell.col] === 2)
+              .map(cell => cell.row);
+            // Determine the oil “level” as the lowest row index that is still oil-free (oil must fill above this level)
+            const oilLevel = Math.max(...oilRows);
             for (const cell of cells) {
-              if (cell.row >= topmostOilRow && cell.row <= lowestOilRow && grid[cell.row][cell.col] === 0) {
+              // If the cell is above (has a row index less than or equal to) the oilLevel, fill it with oil
+              if (cell.row <= oilLevel && grid[cell.row][cell.col] === 0) {
                 if (canFillCell(cell.row, cell.col, 2)) {
                   grid[cell.row][cell.col] = 2;
                   changed = true;
@@ -598,7 +652,10 @@ document.addEventListener('DOMContentLoaded', function() {
           }
         }
       }
-      return { solved: isSolved, grid };
+      return {
+        solved: isSolved,
+        grid
+      };
     }
   
     function countRowType(grid, row, type) {
@@ -610,7 +667,11 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   
     function validateSolution(solution, puzzle) {
-      const { cells, width, height } = solution;
+      const {
+        cells,
+        width,
+        height
+      } = solution;
       let valid = true;
       for (let row = 0; row < height; row++) {
         const waterCount = countRowType(cells, row, 1);
