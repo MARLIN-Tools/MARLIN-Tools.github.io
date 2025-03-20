@@ -55,7 +55,7 @@ document.addEventListener('DOMContentLoaded', function () {
         currentPuzzle = collectGridData();
         if (validatePuzzleInput(currentPuzzle)) {
           solvePuzzleButton.disabled = true;
-          solutionStatus.innerHTML = 'Solving puzzle...';
+          solutionStatus.innerHTML = 'Solving puzzle!';
           solutionStatus.className = '';
           setTimeout(() => {
             const solution = solvePuzzle(currentPuzzle);
@@ -1010,7 +1010,7 @@ document.addEventListener('DOMContentLoaded', function () {
         // Only notify when we have a valid solution and pass the puzzle data
         notifyDiscordWebhook(solution, currentPuzzle);
       } else {
-        solutionStatus.innerHTML = '<strong>Solution does not satisfy all constraints!</strong>';
+        solutionStatus.innerHTML = '<strong>Solution does not satisfy all of the constraints!</strong>';
         solutionStatus.className = 'error';
       }
     }
