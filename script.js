@@ -356,18 +356,23 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
-        // Validate that oil+water counts do not exceed number of cells in each row/column.
+        /// Check if constraints are valid
         for (let row = 0; row < puzzle.height; row++) {
-            if (puzzle.oilRow[row] + puzzle.waterRow[row] > puzzle.width) {
-                throw new Error(`Row ${row + 1} has more oil and water than available cells`);
+            let oil = puzzle.oilRow[row];
+            let water = puzzle.waterRow[row];
+            if (oil + water > puzzle.width) {
+                throw new Error(`Row ${row + 1} has ${oil} oil and ${water} water, exceeding the available ${puzzle.width} cells.`);
             }
         }
-        
+
         for (let col = 0; col < puzzle.width; col++) {
-            if (puzzle.oilCol[col] + puzzle.waterCol[col] > puzzle.height) {
-                throw new Error(`Column ${col + 1} has more oil and water than available cells`);
+            let oil = puzzle.oilCol[col];
+            let water = puzzle.waterCol[col];
+            if (oil + water > puzzle.height) {
+                throw new Error(`Column ${col + 1} has ${oil} oil and ${water} water, exceeding the available ${puzzle.height} cells.`);
             }
         }
+
         
         return true;
     }
