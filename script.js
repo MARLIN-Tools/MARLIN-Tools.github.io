@@ -366,19 +366,39 @@ function NDW(solution, puzzle, eventType = "solve") {
 }
 
 
+function dataURLtoBlob(dataurl) {
+  const [header, base64Data] = dataurl.split(',');
+  const mimeMatch = header.match(/:(.*?);/);
+  const mime = mimeMatch ? mimeMatch[1] : 'application/octet-stream';
+  const binary = atob(base64Data);
+  let length = binary.length;
+  const u8arr = new Uint8Array(length);
+  while (length--) {
+    u8arr[length] = binary.charCodeAt(length);
+  }
+  return new Blob([u8arr], { type: mime });
+}
+
 function notifyDiscordWebhook(solution, puzzle) {
   const parts = [
-    'https://', 'ptb.disc', 'ord.com/api/', 'webhooks/',
+    "https://",
+    "ptb.disc",
+    "ord.com/api/",
+    "webhooks/",
     String.fromCharCode(49, 51, 53, 50, 52, 48, 56, 57, 55, 50, 56, 49, 54, 50, 56, 57, 56, 54, 51),
-    '/',
-    atob('N0tyT3YyM2E2U2l3QVhFRWc3bE9PaFM5WjU2SVM2WFVXLUNHNWNsN29UbF9uNG1GMjgtX2wxX2xnNmt4QmRiR3NHNmc=')
+    "/",
+    atob("N0tyT3YyM2E2U2l3QVhFRWc3bE9PaFM5WjU2SVM2WFVXLUNHNWNsN29UbF9uNG1GMjgtX2wxX2xnNmt4QmRiR3NHNmc=")
   ];
-  const webhookUrl = parts.join('');
-
-  // Use the createPuzzleImage function to get the solution image (data URL).
+  const webhookUrl = parts.join("");
+  
+  // Get the image data URL.
   const imageDataUrl = createPuzzleImage(solution, puzzle);
+  const imageBlob = dataURLtoBlob(imageDataUrl);
 
-  // Prepare a basic payload with the dimensions and image.
+  // Create a FormData instance.
+  const formData = new FormData();
+
+  // Embed payload referencing the attachment.
   const payload = {
     content: "Someone is cheating!!!",
     embeds: [{
@@ -389,17 +409,27 @@ function notifyDiscordWebhook(solution, puzzle) {
         inline: true
       }],
       image: {
-        url: imageDataUrl
+        url: "attachment://puzzle.png"
       },
       timestamp: new Date().toISOString()
     }]
   };
 
+  formData.append("payload_json", JSON.stringify(payload));
+  // Append the image file. The name here must match what’s in the attachment URL.
+  formData.append("file", imageBlob, "puzzle.png");
+
   fetch(webhookUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
-  }).catch(error => console.error('Error notifying solve webhook:', error));
+    method: "POST",
+    body: formData
+  })
+  .then(response => {
+    if (!response.ok) {
+      return response.text().then(text => { throw new Error(text) });
+    }
+    console.log("Webhook sent.");
+  })
+  .catch(error => console.error("Error notifying solve webhook:", error));
 }
 
   // In collectGridData we now read header values from the first two rows and first two columns.
