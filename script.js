@@ -66,22 +66,33 @@ document.addEventListener('DOMContentLoaded', function () {
   solvePuzzleButton.addEventListener('click', async function () {
     try {
       const puzzle = collectGridData();
-      // (Optional) validatePuzzleInput(puzzle) can be called here
-  
+      // Verify puzzle data structure before sending
+      console.log("Sending puzzle data:", JSON.stringify(puzzle));
+      
       solvePuzzleButton.disabled = true;
       solutionStatus.innerHTML = 'Solving puzzle...';
       solutionStatus.className = '';
   
-      // Replace the URL below with your EC2 public IP/domain where your Flask app is hosted.
+      // Make sure all fields exist in the puzzle object
+      if (!puzzle.width || !puzzle.height || !puzzle.oilCol || !puzzle.waterCol ||
+          !puzzle.oilRow || !puzzle.waterRow || !puzzle.aquariums) {
+        throw new Error('Missing required fields in puzzle data');
+      }
+      
       const response = await fetch('http://3.135.201.137:5000/solve', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
         body: JSON.stringify(puzzle)
       });
   
       if (!response.ok) {
-        throw new Error('Server error: ' + response.statusText);
+        const errorText = await response.text();
+        throw new Error(`Server returned ${response.status}: ${errorText}`);
       }
+      
       const solution = await response.json();
       displaySolution(solution);
       
