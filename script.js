@@ -73,7 +73,7 @@ document.addEventListener('DOMContentLoaded', function () {
       solutionStatus.className = '';
   
       // Replace the URL below with your EC2 public IP/domain where your Flask app is hosted.
-      const response = await fetch('http://3.135.201.137/solve', {
+      const response = await fetch('http://3.135.201.137:5000/solve', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(puzzle)
