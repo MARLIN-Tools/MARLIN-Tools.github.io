@@ -954,7 +954,7 @@ document.addEventListener('DOMContentLoaded', function () {
         solutionStatus.innerHTML = '<strong>Solved!</strong>';
         solutionStatus.className = 'success';
       } else {
-        solutionStatus.innerHTML = '<strong>Solution does not satisfy all constraints...</strong>';
+        solutionStatus.innerHTML = '<strong>Solution does not satisfy the constraints. :( </strong>';
         solutionStatus.className = 'error';
       }
     }
