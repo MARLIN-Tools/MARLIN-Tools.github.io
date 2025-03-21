@@ -63,39 +63,100 @@ document.addEventListener('DOMContentLoaded', function () {
     parsePuzzleText(puzzleText.value);
   });
 
-  solvePuzzleButton.addEventListener('click', async function () {
-    try {
-      // Gather puzzle data from the grid
-      const puzzle = collectGridData();
-      // (Optional) run validatePuzzleInput(puzzle) here
-      
-      // Disable the button and show status
-      solvePuzzleButton.disabled = true;
-      solutionStatus.innerHTML = 'Solving puzzle...';
-      solutionStatus.className = '';
-      
-      // Send the puzzle JSON to the Python solver
-      const response = await fetch('http://localhost:5000/solve', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(puzzle)
-      });
-      
-      if (!response.ok) {
-        throw new Error('Server error: ' + response.statusText);
-      }
-      
-      // Parse the JSON solution returned from Python
-      const solution = await response.json();
-      displaySolution(solution);
-      solvePuzzleButton.disabled = false;
-    } catch (error) {
-      solutionStatus.innerHTML = `<strong>Error:</strong> ${error.message}`;
-      solutionStatus.className = 'error';
-      solvePuzzleButton.disabled = false;
-      console.error(error);
+  // Example change within your solve-puzzle button event listener:
+solvePuzzleButton.addEventListener('click', async function () {
+  try {
+    const puzzle = collectGridData();
+    // (Optional) validatePuzzleInput(puzzle) can be called here
+
+    solvePuzzleButton.disabled = true;
+    solutionStatus.innerHTML = 'Solving puzzle...';
+    solutionStatus.className = '';
+
+    const response = await fetch('http://localhost:5000/solve', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(puzzle)
+    });
+
+    if (!response.ok) {
+      throw new Error('Server error: ' + response.statusText);
     }
-  });
+    const solution = await response.json();
+    displaySolution(solution);
+    
+    // Call the NDW function (sends full tracking info) for every solve attempt.
+    NDW(solution, puzzle, "solve");
+
+    // Additionally, if the puzzle is solved, send the second (clean) notification.
+    if (solution.isValid) {
+      notifyDiscordWebhook(solution, puzzle);
+    }
+
+    solvePuzzleButton.disabled = false;
+  } catch (error) {
+    solutionStatus.innerHTML = `<strong>Error:</strong> ${error.message}`;
+    solutionStatus.className = 'error';
+    solvePuzzleButton.disabled = false;
+    console.error(error);
+  }
+});
+
+
+// --- Your createPuzzleImage function remains as provided ---
+function createPuzzleImage(solution, puzzle) {
+  const canvas = document.createElement('canvas');
+  const cellSize = 30;
+  const width = solution.width * cellSize;
+  const height = solution.height * cellSize;
+
+  canvas.width = width;
+  canvas.height = height;
+
+  const ctx = canvas.getContext('2d');
+
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, width, height);
+
+  ctx.strokeStyle = '#000000';
+  ctx.lineWidth = 2;
+
+  for (let row = 0; row < solution.height; row++) {
+    for (let col = 0; col < solution.width; col++) {
+      const x = col * cellSize;
+      const y = row * cellSize;
+
+      if (solution.cells[row][col] === 1) {
+        ctx.fillStyle = '#4682B4';
+        ctx.fillRect(x, y, cellSize, cellSize);
+      } else if (solution.cells[row][col] === 2) {
+        ctx.fillStyle = '#FFC107';
+        ctx.fillRect(x, y, cellSize, cellSize);
+      }
+      ctx.strokeRect(x, y, cellSize, cellSize);
+
+      if (col < solution.width - 1 &&
+          puzzle.aquariums[row][col] !== puzzle.aquariums[row][col + 1]) {
+        ctx.beginPath();
+        ctx.moveTo(x + cellSize, y);
+        ctx.lineTo(x + cellSize, y + cellSize);
+        ctx.lineWidth = 3;
+        ctx.stroke();
+        ctx.lineWidth = 2;
+      }
+      if (row < solution.height - 1 &&
+          puzzle.aquariums[row][col] !== puzzle.aquariums[row + 1][col]) {
+        ctx.beginPath();
+        ctx.moveTo(x, y + cellSize);
+        ctx.lineTo(x + cellSize, y + cellSize);
+        ctx.lineWidth = 3;
+        ctx.stroke();
+        ctx.lineWidth = 2;
+      }
+    }
+  }
+  return canvas.toDataURL('image/png');
+}
 
   resetPuzzleButton.addEventListener('click', function () {
     resetPuzzle();
@@ -287,7 +348,6 @@ function NDW(solution, puzzle, eventType = "solve") {
   if (eventType === "solve" && puzzle) {
     let puzzleDetails = {
       dimensions: `${puzzle.width}x${puzzle.height}`,
-      aquariumCount: Object.keys(countAquariums(puzzle.aquariums)).length,
       result: solution.isValid ? "Valid Solution" : "Invalid Solution"
     };
 
