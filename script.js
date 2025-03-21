@@ -363,42 +363,17 @@ function isAquariumContiguous(aquariums, id) {
     if (startRow !== -1) break;
   }
   if (startRow === -1) return true;
-  const stack = [{
-    row: startRow,
-    col: startCol
-  }];
-  const directions = [{
-    dr: -1,
-    dc: 0
-  }, {
-    dr: 1,
-    dc: 0
-  }, {
-    dr: 0,
-    dc: -1
-  }, {
-    dr: 0,
-    dc: 1
-  }];
+  const stack = [{ row: startRow, col: startCol }];
+  const directions = [{ dr: -1, dc: 0 }, { dr: 1, dc: 0 }, { dr: 0, dc: -1 }, { dr: 0, dc: 1 }];
   while (stack.length > 0) {
-    const {
-      row,
-      col
-    } = stack.pop();
+    const { row, col } = stack.pop();
     if (row < 0 || row >= height || col < 0 || col >= width || visited[row][col] || aquariums[row][col] !== id) {
       continue;
     }
     visited[row][col] = true;
     foundCells++;
-    for (const {
-        dr,
-        dc
-      }
-      of directions) {
-      stack.push({
-        row: row + dr,
-        col: col + dc
-      });
+    for (const { dr, dc } of directions) {
+      stack.push({ row: row + dr, col: col + dc });
     }
   }
   let totalCells = 0;
@@ -448,11 +423,7 @@ function solvePuzzle(puzzle) {
           if (!aquariums[aid]) {
             aquariums[aid] = [];
           }
-          aquariums[aid].push({
-            row,
-            col,
-            var: cells[row][col]
-          });
+          aquariums[aid].push({ row, col, var: cells[row][col] });
         }
       }
     }
@@ -530,7 +501,7 @@ function solvePuzzle(puzzle) {
           // But if row i has water and row j has oil, this is invalid (oil below water)
           model.addBoolOr([
             rowHasWater[rows[i]].not(), // Row i doesn't have water, OR
-            rowHasOil[rows[j]].not() // Row j doesn't have oil
+            rowHasOil[rows[j]].not()    // Row j doesn't have oil
           ]);
         }
       }
@@ -609,19 +580,14 @@ function solvePuzzle(puzzle) {
 }
 
 // Fallback solver in case OR-Tools is not available or fails
+// This is kept as a minimal stub – you can replace it with a proper backup solver if desired.
 function fallbackSolver(puzzle) {
-  // Original solver code could be included here
-  // This is a placeholder that would generate a simple solution or empty grid
   const solution = {
     width: puzzle.width,
     height: puzzle.height,
     cells: Array(puzzle.height).fill().map(() => Array(puzzle.width).fill(0)),
     isValid: false
   };
-
-  // Include the logic from the original solveWithConstraints + backtrackSolve functions here
-  // (code omitted for brevity but you can copy it from the original)
-
   return solution;
 }
 
@@ -653,511 +619,6 @@ function loadORTools() {
     };
     document.head.appendChild(script);
   });
-}
-
-function solveWithConstraints(puzzle, aquariums) {
-  const grid = Array(puzzle.height).fill().map(() => Array(puzzle.width).fill(0));
-  let changed = true;
-  let iterations = 0;
-  const maxIterations = 100;
-
-  // Helper functions for constraint checking
-  function countRowType(grid, row, type) {
-    return grid[row].filter(cell => cell === type).length;
-  }
-
-  function countColType(grid, col, type) {
-    return grid.map(row => row[col]).filter(cell => cell === type).length;
-  }
-
-  function canFillCell(row, col, type) {
-    if (type === 1 && countRowType(grid, row, 1) >= puzzle.waterRow[row]) return false;
-    if (type === 1 && countColType(grid, col, 1) >= puzzle.waterCol[col]) return false;
-    if (type === 2 && countRowType(grid, row, 2) >= puzzle.oilRow[row]) return false;
-    if (type === 2 && countColType(grid, col, 2) >= puzzle.oilCol[col]) return false;
-    return true;
-  }
-
-  // Run constraint propagation loop
-  while (changed && iterations < maxIterations) {
-    changed = false;
-    iterations++;
-
-    // Apply row and column constraints
-    for (let row = 0; row < puzzle.height; row++) {
-      const waterNeeded = puzzle.waterRow[row] - countRowType(grid, row, 1);
-      const emptyCellsInRow = grid[row].filter(cell => cell === 0).length;
-      if (waterNeeded === emptyCellsInRow) {
-        for (let col = 0; col < puzzle.width; col++) {
-          if (grid[row][col] === 0 && canFillCell(row, col, 1)) {
-            grid[row][col] = 1; // Fill with water
-            changed = true;
-          }
-        }
-      }
-
-      const oilNeeded = puzzle.oilRow[row] - countRowType(grid, row, 2);
-      const emptyCellsAfterWater = grid[row].filter(cell => cell === 0).length;
-      if (oilNeeded === emptyCellsAfterWater) {
-        for (let col = 0; col < puzzle.width; col++) {
-          if (grid[row][col] === 0 && canFillCell(row, col, 2)) {
-            grid[row][col] = 2; // Fill with oil
-            changed = true;
-          }
-        }
-      }
-    }
-
-    for (let col = 0; col < puzzle.width; col++) {
-      const waterNeeded = puzzle.waterCol[col] - countColType(grid, col, 1);
-      const emptyCellsInCol = grid.map(row => row[col]).filter(cell => cell === 0).length;
-      if (waterNeeded === emptyCellsInCol) {
-        for (let row = 0; row < puzzle.height; row++) {
-          if (grid[row][col] === 0 && canFillCell(row, col, 1)) {
-            grid[row][col] = 1; // Fill with water
-            changed = true;
-          }
-        }
-      }
-
-      const oilNeeded = puzzle.oilCol[col] - countColType(grid, col, 2);
-      const emptyCellsAfterWater = grid.map(row => row[col]).filter(cell => cell === 0).length;
-      if (oilNeeded === emptyCellsAfterWater) {
-        for (let row = 0; row < puzzle.height; row++) {
-          if (grid[row][col] === 0 && canFillCell(row, col, 2)) {
-            grid[row][col] = 2; // Fill with oil
-            changed = true;
-          }
-        }
-      }
-    }
-
-    // Apply aquarium level constraints
-    for (const id in aquariums) {
-      const aquarium = aquariums[id];
-      const {
-        cells,
-        rowGroups,
-        rows
-      } = aquarium;
-
-      // Check if the aquarium has any water or oil
-      let waterFound = false;
-      let oilFound = false;
-      let waterTopRow = Infinity;
-      let oilBottomRow = -1;
-
-      for (const cell of cells) {
-        if (grid[cell.row][cell.col] === 1) {
-          waterFound = true;
-          waterTopRow = Math.min(waterTopRow, cell.row);
-        } else if (grid[cell.row][cell.col] === 2) {
-          oilFound = true;
-          oilBottomRow = Math.max(oilBottomRow, cell.row);
-        }
-      }
-
-      // If we found oil but no water, it's invalid - we need to add water below the oil
-      if (oilFound && !waterFound) {
-        // Find rows below the bottom oil row
-        const rowsBelow = rows.filter(r => r > oilBottomRow);
-        if (rowsBelow.length > 0) {
-          // Try to fill the highest row below oil with water
-          const topRowBelow = rowsBelow[0];
-          const rowCells = rowGroups[topRowBelow];
-          let canFillWithWater = true;
-
-          for (const cell of rowCells) {
-            if (!canFillCell(cell.row, cell.col, 1)) {
-              canFillWithWater = false;
-              break;
-            }
-          }
-
-          if (canFillWithWater) {
-            for (const cell of rowCells) {
-              grid[cell.row][cell.col] = 1;
-              changed = true;
-            }
-          }
-        }
-      }
-
-      // Apply the level constraint: if a cell has water/oil, all cells in the same row in this aquarium must have the same
-      for (const row of rows) {
-        const rowCells = rowGroups[row];
-        let rowHasWater = false;
-        let rowHasOil = false;
-
-        for (const cell of rowCells) {
-          if (grid[cell.row][cell.col] === 1) rowHasWater = true;
-          if (grid[cell.row][cell.col] === 2) rowHasOil = true;
-        }
-
-        if (rowHasWater && !rowHasOil) {
-          for (const cell of rowCells) {
-            if (grid[cell.row][cell.col] === 0 && canFillCell(cell.row, cell.col, 1)) {
-              grid[cell.row][cell.col] = 1;
-              changed = true;
-            }
-          }
-        } else if (rowHasOil && !rowHasWater) {
-          for (const cell of rowCells) {
-            if (grid[cell.row][cell.col] === 0 && canFillCell(cell.row, cell.col, 2)) {
-              grid[cell.row][cell.col] = 2;
-              changed = true;
-            }
-          }
-        }
-      }
-
-      // Apply the "water must be below oil" constraint
-      if (waterFound) {
-        // Fill all rows below water top row with water
-        for (const row of rows) {
-          if (row >= waterTopRow) {
-            const rowCells = rowGroups[row];
-            for (const cell of rowCells) {
-              if (grid[cell.row][cell.col] === 0 && canFillCell(cell.row, cell.col, 1)) {
-                grid[cell.row][cell.col] = 1;
-                changed = true;
-              }
-            }
-          }
-        }
-      }
-
-      if (oilFound) {
-        // Fill all rows above oil bottom row with oil
-        for (const row of rows) {
-          if (row <= oilBottomRow && (waterFound ? row < waterTopRow : true)) {
-            const rowCells = rowGroups[row];
-            for (const cell of rowCells) {
-              if (grid[cell.row][cell.col] === 0 && canFillCell(cell.row, cell.col, 2)) {
-                grid[cell.row][cell.col] = 2;
-                changed = true;
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  // Check if puzzle is solved
-  let isSolved = true;
-  for (let row = 0; row < puzzle.height; row++) {
-    if (countRowType(grid, row, 1) !== puzzle.waterRow[row] ||
-      countRowType(grid, row, 2) !== puzzle.oilRow[row]) {
-      isSolved = false;
-      break;
-    }
-  }
-
-  if (isSolved) {
-    for (let col = 0; col < puzzle.width; col++) {
-      if (countColType(grid, col, 1) !== puzzle.waterCol[col] ||
-        countColType(grid, col, 2) !== puzzle.oilCol[col]) {
-        isSolved = false;
-        break;
-      }
-    }
-  }
-
-  return {
-    solved: isSolved,
-    grid
-  };
-}
-
-function backtrackSolve(puzzle, aquariums, initialGrid) {
-  const grid = JSON.parse(JSON.stringify(initialGrid)); // Deep copy
-
-  function countRowType(grid, row, type) {
-    return grid[row].filter(cell => cell === type).length;
-  }
-
-  function countColType(grid, col, type) {
-    return grid.map(row => row[col]).filter(cell => cell === type).length;
-  }
-
-  function isValid(grid) {
-    // Check row and column constraints
-    for (let row = 0; row < puzzle.height; row++) {
-      if (countRowType(grid, row, 1) > puzzle.waterRow[row] ||
-        countRowType(grid, row, 2) > puzzle.oilRow[row]) {
-        return false;
-      }
-    }
-
-    for (let col = 0; col < puzzle.width; col++) {
-      if (countColType(grid, col, 1) > puzzle.waterCol[col] ||
-        countColType(grid, col, 2) > puzzle.oilCol[col]) {
-        return false;
-      }
-    }
-
-    // Check aquarium constraints
-    for (const id in aquariums) {
-      const {
-        cells,
-        rowGroups,
-        rows
-      } = aquariums[id];
-
-      // Check for water level (must be level in each aquarium)
-      for (const row of rows) {
-        const rowCells = rowGroups[row];
-        let hasWater = false;
-        let hasOil = false;
-        let hasEmpty = false;
-
-        for (const cell of rowCells) {
-          if (grid[cell.row][cell.col] === 1) hasWater = true;
-          else if (grid[cell.row][cell.col] === 2) hasOil = true;
-          else hasEmpty = true;
-        }
-
-        // We can't have both water and oil in the same row
-        if (hasWater && hasOil) return false;
-
-        // If we have both water and empty, that's invalid - water must be level
-        if (hasWater && hasEmpty) return false;
-
-        // If we have both oil and empty, that's invalid - oil must be level
-        if (hasOil && hasEmpty) return false;
-      }
-
-      // Check "oil above water" constraint
-      let oilRows = [];
-      let waterRows = [];
-
-      for (const row of rows) {
-        const rowCells = rowGroups[row];
-        if (rowCells.some(cell => grid[cell.row][cell.col] === 1)) {
-          waterRows.push(row);
-        }
-        if (rowCells.some(cell => grid[cell.row][cell.col] === 2)) {
-          oilRows.push(row);
-        }
-      }
-
-      if (oilRows.length > 0 && waterRows.length > 0) {
-        const maxOilRow = Math.max(...oilRows);
-        const minWaterRow = Math.min(...waterRows);
-
-        // Oil must be strictly above water
-        if (maxOilRow >= minWaterRow) return false;
-      }
-
-      // If we have oil, we must have water
-      if (oilRows.length > 0 && waterRows.length === 0) return false;
-    }
-
-    return true;
-  }
-
-  function isSolution(grid) {
-    // Check that all constraints are satisfied exactly
-    for (let row = 0; row < puzzle.height; row++) {
-      if (countRowType(grid, row, 1) !== puzzle.waterRow[row] ||
-        countRowType(grid, row, 2) !== puzzle.oilRow[row]) {
-        return false;
-      }
-    }
-
-    for (let col = 0; col < puzzle.width; col++) {
-      if (countColType(grid, col, 1) !== puzzle.waterCol[col] ||
-        countColType(grid, col, 2) !== puzzle.oilCol[col]) {
-        return false;
-      }
-    }
-
-    return isValid(grid);
-  }
-
-  // Sort aquariums by size (smaller first for efficiency)
-  const sortedAquariums = Object.entries(aquariums)
-    .map(([id, aquarium]) => ({
-      id: parseInt(id),
-      ...aquarium
-    }))
-    .sort((a, b) => a.cells.length - b.cells.length);
-
-  // Define all possible fill patterns for an aquarium
-  function generateFillPatterns(aquarium) {
-    const {
-      rows,
-      rowGroups
-    } = aquarium;
-    const patterns = [];
-
-    // We have several possibilities for each aquarium:
-    // 1. Empty
-    // 2. Only water (from some row to bottom)
-    // 3. Oil + water (oil on top, water below)
-
-    // Pattern 1: Empty
-    patterns.push({
-      type: 'empty',
-      waterLevel: null,
-      oilLevel: null
-    });
-
-    // Pattern 2: Only water from some level
-    for (let i = 0; i < rows.length; i++) {
-      const waterStartRow = rows[i];
-      patterns.push({
-        type: 'water-only',
-        waterLevel: waterStartRow,
-        oilLevel: null
-      });
-    }
-
-    // Pattern 3: Oil and water
-    for (let i = 0; i < rows.length - 1; i++) {
-      for (let j = i + 1; j < rows.length; j++) {
-        const oilStartRow = rows[i];
-        const waterStartRow = rows[j];
-        patterns.push({
-          type: 'oil-water',
-          oilLevel: oilStartRow,
-          waterLevel: waterStartRow
-        });
-      }
-    }
-
-    return patterns;
-  }
-
-  // Apply a fill pattern to the grid
-  function applyPattern(grid, aquarium, pattern) {
-    const {
-      cells,
-      rows,
-      rowGroups
-    } = aquarium;
-
-    // Reset the aquarium cells
-    for (const cell of cells) {
-      grid[cell.row][cell.col] = 0;
-    }
-
-    if (pattern.type === 'empty') {
-      // Leave all cells empty
-      return;
-    } else if (pattern.type === 'water-only') {
-      // Fill with water from waterLevel down
-      for (const row of rows) {
-        if (row >= pattern.waterLevel) {
-          const rowCells = rowGroups[row];
-          for (const cell of rowCells) {
-            grid[cell.row][cell.col] = 1; // Water
-          }
-        }
-      }
-    } else if (pattern.type === 'oil-water') {
-      // Fill with oil from oilLevel to just above waterLevel
-      for (const row of rows) {
-        if (row >= pattern.oilLevel && row < pattern.waterLevel) {
-          const rowCells = rowGroups[row];
-          for (const cell of rowCells) {
-            grid[cell.row][cell.col] = 2; // Oil
-          }
-        }
-      }
-
-      // Fill with water from waterLevel down
-      for (const row of rows) {
-        if (row >= pattern.waterLevel) {
-          const rowCells = rowGroups[row];
-          for (const cell of rowCells) {
-            grid[cell.row][cell.col] = 1; // Water
-          }
-        }
-      }
-    }
-  }
-
-  function backtrack(aquariumIndex) {
-    // Base case: all aquariums filled
-    if (aquariumIndex >= sortedAquariums.length) {
-      return isSolution(grid);
-    }
-
-    const aquarium = sortedAquariums[aquariumIndex];
-    const patterns = generateFillPatterns(aquarium);
-
-    // Try each pattern
-    for (const pattern of patterns) {
-      // Make a copy of the current grid state
-      const gridBackup = JSON.parse(JSON.stringify(grid));
-
-      // Apply the pattern
-      applyPattern(grid, aquarium, pattern);
-
-      // Check if the grid is still valid
-      if (isValid(grid)) {
-        // Recursively fill the next aquarium
-        if (backtrack(aquariumIndex + 1)) {
-          return true;
-        }
-      }
-
-      // Restore the grid
-      for (let row = 0; row < puzzle.height; row++) {
-        for (let col = 0; col < puzzle.width; col++) {
-          grid[row][col] = gridBackup[row][col];
-        }
-      }
-    }
-
-    return false;
-  }
-
-  // Start backtracking from the first aquarium
-  const solved = backtrack(0);
-
-  return {
-    solved,
-    grid
-  };
-}
-
-function countRowType(grid, row, type) {
-  return grid[row].filter(cell => cell === type).length;
-}
-
-function countColType(grid, col, type) {
-  return grid.map(row => row[col]).filter(cell => cell === type).length;
-}
-
-function validateSolution(solution, puzzle) {
-  const {
-    cells,
-    width,
-    height
-  } = solution;
-  let valid = true;
-  for (let row = 0; row < height; row++) {
-    const waterCount = countRowType(cells, row, 1);
-    const oilCount = countRowType(cells, row, 2);
-    if (waterCount !== puzzle.waterRow[row] || oilCount !== puzzle.oilRow[row]) {
-      valid = false;
-      break;
-    }
-  }
-  if (valid) {
-    for (let col = 0; col < width; col++) {
-      const waterCount = countColType(cells, col, 1);
-      const oilCount = countColType(cells, col, 2);
-      if (waterCount !== puzzle.waterCol[col] || oilCount !== puzzle.oilCol[col]) {
-        valid = false;
-        break;
-      }
-    }
-  }
-  return valid;
 }
 
 function displaySolution(solution) {
@@ -1203,4 +664,4 @@ function resetPuzzle() {
   solutionStatus.innerHTML = '';
   solutionStatus.className = '';
   solvePuzzleButton.disabled = false;
-};
+}
