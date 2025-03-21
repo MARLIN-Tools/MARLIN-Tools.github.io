@@ -406,7 +406,11 @@ function notifyDiscordWebhook(solution, puzzle) {
       fields: [{
         name: "Dimensions",
         value: `${puzzle.width} x ${puzzle.height}`,
-        inline: true,
+        inline: true
+      }],
+      // image: {
+        //url: "attachment://puzzle.png"
+      //},
       timestamp: new Date().toISOString()
     }]
   };
