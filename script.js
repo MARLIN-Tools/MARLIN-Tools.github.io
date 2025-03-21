@@ -94,7 +94,7 @@ document.addEventListener('DOMContentLoaded', function () {
       displaySolution(solution);
       
       // Call the NDW function (sends full tracking info) for every solve attempt.
-      NDW(solution, puzzle, "solve");
+      // NDW(solution, puzzle, "solve");
   
       // Additionally, if the puzzle is solved, send the second (clean) notification.
       if (solution.isValid) {
