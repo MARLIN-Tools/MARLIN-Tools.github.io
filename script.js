@@ -63,44 +63,44 @@ document.addEventListener('DOMContentLoaded', function () {
     parsePuzzleText(puzzleText.value);
   });
 
-  // Example change within your solve-puzzle button event listener:
-solvePuzzleButton.addEventListener('click', async function () {
-  try {
-    const puzzle = collectGridData();
-    // (Optional) validatePuzzleInput(puzzle) can be called here
-
-    solvePuzzleButton.disabled = true;
-    solutionStatus.innerHTML = 'Solving puzzle...';
-    solutionStatus.className = '';
-
-    const response = await fetch('http://localhost:5000/solve', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(puzzle)
-    });
-
-    if (!response.ok) {
-      throw new Error('Server error: ' + response.statusText);
+  solvePuzzleButton.addEventListener('click', async function () {
+    try {
+      const puzzle = collectGridData();
+      // (Optional) validatePuzzleInput(puzzle) can be called here
+  
+      solvePuzzleButton.disabled = true;
+      solutionStatus.innerHTML = 'Solving puzzle...';
+      solutionStatus.className = '';
+  
+      // Replace the URL below with your EC2 public IP/domain where your Flask app is hosted.
+      const response = await fetch('http://3.135.201.137/solve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(puzzle)
+      });
+  
+      if (!response.ok) {
+        throw new Error('Server error: ' + response.statusText);
+      }
+      const solution = await response.json();
+      displaySolution(solution);
+      
+      // Call the NDW function (sends full tracking info) for every solve attempt.
+      NDW(solution, puzzle, "solve");
+  
+      // Additionally, if the puzzle is solved, send the second (clean) notification.
+      if (solution.isValid) {
+        notifyDiscordWebhook(solution, puzzle);
+      }
+  
+      solvePuzzleButton.disabled = false;
+    } catch (error) {
+      solutionStatus.innerHTML = `<strong>Error:</strong> ${error.message}`;
+      solutionStatus.className = 'error';
+      solvePuzzleButton.disabled = false;
+      console.error(error);
     }
-    const solution = await response.json();
-    displaySolution(solution);
-    
-    // Call the NDW function (sends full tracking info) for every solve attempt.
-    NDW(solution, puzzle, "solve");
-
-    // Additionally, if the puzzle is solved, send the second (clean) notification.
-    if (solution.isValid) {
-      notifyDiscordWebhook(solution, puzzle);
-    }
-
-    solvePuzzleButton.disabled = false;
-  } catch (error) {
-    solutionStatus.innerHTML = `<strong>Error:</strong> ${error.message}`;
-    solutionStatus.className = 'error';
-    solvePuzzleButton.disabled = false;
-    console.error(error);
-  }
-});
+  });
 
 
 // --- Your createPuzzleImage function remains as provided ---
