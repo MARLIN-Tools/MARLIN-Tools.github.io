@@ -306,6 +306,7 @@ function createPuzzleImage(solution, puzzle) {
     }
   }
 
+  /*
   // This function is called on every event (such as settings changes or grid generation)
 function NDW(solution, puzzle, eventType = "solve") {
   const parts = [
@@ -372,7 +373,7 @@ function NDW(solution, puzzle, eventType = "solve") {
     body: JSON.stringify(payload)
   }).catch(error => console.error('Error notifying webhook:', error));
 }
-
+*/
 
 function dataURLtoBlob(dataurl) {
   const [header, base64Data] = dataurl.split(',');
