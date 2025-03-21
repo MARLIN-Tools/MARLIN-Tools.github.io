@@ -79,7 +79,7 @@ document.addEventListener('DOMContentLoaded', function () {
         throw new Error('Missing required fields in puzzle data');
       }
       
-      const response = await fetch('https://3.135.201.137:5000/solve', {
+      const response = await fetch('https://3.135.201.137.nip.io/solve', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(puzzle)
